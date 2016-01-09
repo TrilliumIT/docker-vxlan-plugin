@@ -42,17 +42,8 @@ func NewDriver() (*Driver, error) {
 	return d, nil
 }
 
-// NewHandler initializes the request handler with a driver implementation.
-func NewHandler(driver Driver) *Handler {
-	h := &Handler{driver, sdk.NewHandler(manifest)}
-	h.initMux()
-	return h
-}
-
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
-
-	name := r.NetworkID
 
 	//if r.Options == nil {
 	//	return "", fmt.Errorf("No options provided")
