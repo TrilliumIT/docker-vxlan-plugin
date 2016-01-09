@@ -4,12 +4,13 @@ import (
 	//"fmt"
 	//"strings"
 	//"time"
-	"net"
+	//"net"
+	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
 	//"github.com/samalba/dockerclient"
-	"github.com/davecgh/go-spew/spew"
+	//"github.com/davecgh/go-spew/spew"
 	"github.com/vishvananda/netlink"
 )
 
@@ -34,22 +35,31 @@ func NewDriver() (*Driver, error) {
 
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
-	spew.Dump(r)
 
-	name := r.NetworkID[0:12]
+	netID := r.NetworkID
+	var err error
 
-	vxlanName := "vx_" + name
-	bridgeName := "br_" + name
+	vxlanName := "vx_" + netID[0:12]
+	bridgeName := "br_" + netID[0:12]
 
-	if r.Options != nil {
-		if r.Options["vxlanName"] != nil {
-			vxlanName = r.Options["vxlanName"].(string)
-		}
-		if r.Options["bridgeName"] != nil {
-			bridgeName = r.Options["bridgeName"].(string)
+	// Parse interface name options
+	for k, v := range r.Options {
+		if k == "com.docker.network.generic" {
+			if genericOpts, ok := v.(map[string]interface{}); ok {
+				for key, val := range genericOpts {
+					log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
+					if key == "vxlanName" {
+						log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
+						vxlanName = val.(string)
+					}
+					if key == "bridgeName" {
+						log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
+						bridgeName = val.(string)
+					}
+				}
+			}
 		}
 	}
-	spew.Dump(r.Options["vxlanName"].(string))
 
 	bridge := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{Name: bridgeName},
@@ -58,68 +68,30 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 		LinkAttrs: netlink.LinkAttrs{Name: vxlanName},
 	}
 
-	if r.Options != nil {
-		if r.Options["VxlanId"] != nil {
-			vxlan.VxlanId = r.Options["VxlanId"].(int)
-		}
-		if r.Options["VtepDev"] != nil {
-			vtepDev, err := netlink.LinkByName(r.Options["VtepDev"].(string))
-			if err != nil {
-				return err
+	// Parse other options
+	for k, v := range r.Options {
+		if k == "com.docker.network.generic" {
+			if genericOpts, ok := v.(map[string]interface{}); ok {
+				for key, val := range genericOpts {
+					if key == "vxlanName" {
+						continue
+					}
+					if key == "bridgeName" {
+						continue
+					}
+					log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
+					if key == "VxlanId" {
+						vxlan.VxlanId, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+				}
 			}
-			vxlan.VtepDevIndex = vtepDev.Attrs().Index
-		}
-		if r.Options["SrcAddr"] != nil {
-			vxlan.SrcAddr = net.ParseIP(r.Options["SrcAddr"].(string))
-		}
-		if r.Options["Group"] != nil {
-			vxlan.Group = net.ParseIP(r.Options["Group"].(string))
-		}
-		if r.Options["TTL"] != nil {
-			vxlan.TTL = r.Options["TTL"].(int)
-		}
-		if r.Options["TOS"] != nil {
-			vxlan.TOS = r.Options["TOS"].(int)
-		}
-		if r.Options["Learning"] != nil {
-			vxlan.Learning = r.Options["Learning"].(bool)
-		}
-		if r.Options["Proxy"] != nil {
-			vxlan.Proxy = r.Options["Proxy"].(bool)
-		}
-		if r.Options["RSC"] != nil {
-			vxlan.RSC = r.Options["RSC"].(bool)
-		}
-		if r.Options["L2miss"] != nil {
-			vxlan.L2miss = r.Options["L2miss"].(bool)
-		}
-		if r.Options["L3miss"] != nil {
-			vxlan.L3miss = r.Options["L3miss"].(bool)
-		}
-		if r.Options["NoAge"] != nil {
-			vxlan.NoAge = r.Options["NoAge"].(bool)
-		}
-		if r.Options["GBP"] != nil {
-			vxlan.GBP = r.Options["BGP"].(bool)
-		}
-		if r.Options["Age"] != nil {
-			vxlan.Age = r.Options["Age"].(int)
-		}
-		if r.Options["Limit"] != nil {
-			vxlan.Limit = r.Options["Limit"].(int)
-		}
-		if r.Options["Port"] != nil {
-			vxlan.Port = r.Options["Port"].(int)
-		}
-		if r.Options["PortLow"] != nil {
-			vxlan.PortLow = r.Options["PortLow"].(int)
-		}
-		if r.Options["PortHigh"] != nil {
-			vxlan.PortHigh = r.Options["PortHigh"].(int)
 		}
 	}
 
-	err := netlink.LinkAdd(bridge)
+	err = netlink.LinkAdd(bridge)
 	if err != nil {
 		return err
 	}
@@ -133,7 +105,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 		VXLan:  vxlan,
 		Bridge: bridge,
 	}
-	d.networks[name] = ns
+	d.networks[netID] = ns
 
 	err = netlink.LinkSetMaster(vxlan, bridge)
 	if err != nil {
@@ -144,13 +116,13 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 }
 
 func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
-	name := r.NetworkID[0:12]
+	netID := r.NetworkID
 
-	err := netlink.LinkDel(d.networks[name].VXLan)
+	err := netlink.LinkDel(d.networks[netID].VXLan)
 	if err != nil {
 		return err
 	}
-	err = netlink.LinkDel(d.networks[name].Bridge)
+	err = netlink.LinkDel(d.networks[netID].Bridge)
 	if err != nil {
 		return err
 	}
