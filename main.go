@@ -36,7 +36,7 @@ func Run(ctx *cli.Context) {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	d, err := NewDriver()
+	d, err := vxlan.NewDriver()
 	if err != nil {
 		panic(err)
 	}
