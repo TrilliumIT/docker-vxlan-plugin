@@ -5,7 +5,6 @@ import (
 	//"strings"
 	//"time"
 	"net"
-	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
@@ -44,10 +43,10 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 
 	if r.Options != nil {
 		if r.Options["vxlanName"] != nil {
-			vxlanName = r.Options["vxlanName"]
+			vxlanName = r.Options["vxlanName"].(string)
 		}
 		if r.Options["bridgeName"] != nil {
-			bridgeName = r.Options["bridgeName"]
+			bridgeName = r.Options["bridgeName"].(string)
 		}
 	}
 
@@ -59,60 +58,63 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	}
 
 	if r.Options != nil {
-		if r.Options["VxlanID"] != nil {
-			vxlan.VxlanId = strconf.ParseUInt(r.Options["VxlanID"])
+		if r.Options["VxlanId"] != nil {
+			vxlan.VxlanId = r.Options["VxlanId"].(int)
 		}
 		if r.Options["VtepDev"] != nil {
-			vtepDev = netlink.LinkByName(r.Options["VtepDev"]
+			vtepDev, err := netlink.LinkByName(r.Options["VtepDev"].(string))
+			if err != nil {
+				return err
+			}
 			vxlan.VtepDevIndex = vtepDev.Attrs().Index
 		}
 		if r.Options["SrcAddr"] != nil {
-			vxlan.SrcAddr = net.ParseIP(r.Options["SrcAddr"])
+			vxlan.SrcAddr = net.ParseIP(r.Options["SrcAddr"].(string))
 		}
 		if r.Options["Group"] != nil {
-			vxlan.Group = net.ParseIP(r.Options["Group"])
+			vxlan.Group = net.ParseIP(r.Options["Group"].(string))
 		}
 		if r.Options["TTL"] != nil {
-			vxlan.TTL = strconf.ParseUInt(r.Options["TTL"])
+			vxlan.TTL = r.Options["TTL"].(int)
 		}
 		if r.Options["TOS"] != nil {
-			vxlan.TOS = strconf.ParseUInt(r.Options["TOS"])
+			vxlan.TOS = r.Options["TOS"].(int)
 		}
 		if r.Options["Learning"] != nil {
-			vxlan.Learning = strconf.ParseBool(r.Options["Learning"])
+			vxlan.Learning = r.Options["Learning"].(bool)
 		}
 		if r.Options["Proxy"] != nil {
-			vxlan.Proxy = strconf.ParseBool(r.Options["Proxy"])
+			vxlan.Proxy = r.Options["Proxy"].(bool)
 		}
 		if r.Options["RSC"] != nil {
-			vxlan.RSC = strconf.ParseBool(r.Options["RSC"])
+			vxlan.RSC = r.Options["RSC"].(bool)
 		}
 		if r.Options["L2miss"] != nil {
-			vxlan.L2miss = strconf.ParseBool(r.Options["L2miss"])
+			vxlan.L2miss = r.Options["L2miss"].(bool)
 		}
 		if r.Options["L3miss"] != nil {
-			vxlan.L3miss = strconf.ParseBool(r.Options["L2miss"])
+			vxlan.L3miss = r.Options["L3miss"].(bool)
 		}
 		if r.Options["NoAge"] != nil {
-			vxlan.NoAge = strconf.ParseBool(r.Options["NoAge"])
+			vxlan.NoAge = r.Options["NoAge"].(bool)
 		}
-		if r.Options["BGP"] != nil {
-			vxlan.BGP = strconf.ParseBool(r.Options["BGP"])
+		if r.Options["GBP"] != nil {
+			vxlan.GBP = r.Options["BGP"].(bool)
 		}
 		if r.Options["Age"] != nil {
-			vxlan.Age = strconf.ParseUInt(r.Options["Age"])
+			vxlan.Age = r.Options["Age"].(int)
 		}
 		if r.Options["Limit"] != nil {
-			vxlan.Limit = strconf.ParseUInt(r.Options["Limit"])
+			vxlan.Limit = r.Options["Limit"].(int)
 		}
 		if r.Options["Port"] != nil {
-			vxlan.Port = strconf.ParseUInt(r.Options["Port"])
+			vxlan.Port = r.Options["Port"].(int)
 		}
 		if r.Options["PortLow"] != nil {
-			vxlan.PortLow = strconf.ParseUInt(r.Options["PortLow"])
+			vxlan.PortLow = r.Options["PortLow"].(int)
 		}
 		if r.Options["PortHigh"] != nil {
-			vxlan.PortHigh = strconf.ParseUInt(r.Options["PortHigh"])
+			vxlan.PortHigh = r.Options["PortHigh"].(int)
 		}
 	}
 
