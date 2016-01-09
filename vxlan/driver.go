@@ -39,15 +39,34 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	netID := r.NetworkID
 	var err error
 
-	// Create interfaces
+	bridgeName := "br_" + netID[0:12]
+	vxlanName := "br_" + netID[0:12]
+
+	// get interface names from options first
+	for k, v := range r.Options {
+		if k == "com.docker.network.generic" {
+			if genericOpts, ok := v.(map[string]interface{}); ok {
+				for key, val := range genericOpts {
+					if key == "vxlanName" {
+						vxlanName = val.(string)
+					}
+					if key == "bridgeName" {
+						bridgeName = val.(string)
+					}
+				}
+			}
+		}
+	}
+
+	// create links
 	bridge := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: "br_" + netID[0:12],
+			Name: bridgeName,
 		},
 	}
 	vxlan := &netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: "vx_" + netID[0:12],
+			Name: vxlanName,
 		},
 	}
 
@@ -57,12 +76,6 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 			if genericOpts, ok := v.(map[string]interface{}); ok {
 				for key, val := range genericOpts {
 					log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
-					if key == "vxlanName" {
-						vxlan.LinkAttrs.Name = val.(string)
-					}
-					if key == "bridgeName" {
-						bridge.LinkAttrs.Name = val.(string)
-					}
 					if key == "vxlanMTU" {
 						vxlan.LinkAttrs.MTU, err = strconv.Atoi(val.(string))
 						if err != nil {
@@ -71,6 +84,18 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 					}
 					if key == "bridgeMTU" {
 						bridge.LinkAttrs.MTU, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "vxlanHardwareAddr" {
+						vxlan.LinkAttrs.HardwareAddr, err = net.ParseMAC(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "bridgeHardwareAddr" {
+						bridge.LinkAttrs.HardwareAddr, err = net.ParseMAC(val.(string))
 						if err != nil {
 							return err
 						}
@@ -194,27 +219,44 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 			}
 		}
 	}
+	// Done parsing options
 
+	// delete links if they already exist, don't worry about errors
+	netlink.LinkDel(bridge)
+	netlink.LinkDel(vxlan)
+
+	// add links
 	err = netlink.LinkAdd(bridge)
 	if err != nil {
 		return err
 	}
-
 	err = netlink.LinkAdd(vxlan)
 	if err != nil {
 		return err
 	}
 
+	// add vxlan to bridge
+	err = netlink.LinkSetMaster(vxlan, bridge)
+	if err != nil {
+		return err
+	}
+
+	// bring interfaces up
+	err = netlink.LinkSetUp(bridge)
+	if err != nil {
+		return err
+	}
+	err = netlink.LinkSetUp(vxlan)
+	if err != nil {
+		return err
+	}
+
+	// store interfaces to be used later
 	ns := &NetworkState{
 		VXLan:  vxlan,
 		Bridge: bridge,
 	}
 	d.networks[netID] = ns
-
-	err = netlink.LinkSetMaster(vxlan, bridge)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
