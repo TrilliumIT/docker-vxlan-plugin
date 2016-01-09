@@ -59,7 +59,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 		LinkAttrs: netlink.LinkAttrs{Name: vxlanName},
 		VxlanId:   vxlanID,
 	}
-	err := netlink.LinkAdd(vxlan)
+	err = netlink.LinkAdd(vxlan)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	}
 	d.networks[name] = ns
 
-	err := netlink.LinkSetMaster(vxlan, bridge)
+	err = netlink.LinkSetMaster(vxlan, bridge)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	if err != nil {
 		return err
 	}
-	err := netlink.LinkDel(d.networks[name].Bridge)
+	err = netlink.LinkDel(d.networks[name].Bridge)
 	if err != nil {
 		return err
 	}
