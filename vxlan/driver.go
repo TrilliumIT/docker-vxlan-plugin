@@ -22,8 +22,9 @@ type Driver struct {
 // NetworkState is filled in at network creation time
 // it contains state that we wish to keep for each network
 type NetworkState struct {
-	Bridge *netlink.Bridge
-	VXLan  *netlink.Vxlan
+	Bridge  *netlink.Bridge
+	VXLan   *netlink.Vxlan
+	Gateway string
 }
 
 func NewDriver() (*Driver, error) {
@@ -274,4 +275,58 @@ func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	}
 
 	return nil
+}
+
+func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
+	log.Debugf("Create endpoint request: %+v", r)
+	return nil
+}
+
+func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
+	log.Debugf("Delete endpoint request: %+v", r)
+	return nil
+}
+
+func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, error) {
+	res := &network.InfoResponse{
+		Value: make(map[string]string),
+	}
+	return res, nil
+}
+
+func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
+	// create and attach local name to the bridge
+	veth := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5]},
+		PeerName:  "ethc" + r.EndpointID[:5],
+	}
+	if err := netlink.LinkAdd(veth); err != nil {
+		log.Errorf("failed to create the veth pair named: [ %v ] error: [ %s ] ", veth, err)
+		return nil, err
+	}
+
+	// bring up the veth pair
+	err := netlink.LinkSetUp(veth)
+	if err != nil {
+		log.Warnf("Error enabling  Veth local iface: [ %v ]", veth)
+		return nil, err
+	}
+
+	bridge := d.networks[r.NetworkID].Bridge
+	// add veth to bridge
+	err = netlink.LinkSetMaster(veth, bridge)
+	if err != nil {
+		return nil, err
+	}
+
+	// SrcName gets renamed to DstPrefix + ID on the container iface
+	res := &network.JoinResponse{
+		InterfaceName: network.InterfaceName{
+			SrcName:   veth.PeerName,
+			DstPrefix: "eth",
+		},
+		Gateway: d.networks[r.NetworkID].Gateway,
+	}
+	log.Debugf("Join endpoint %s:%s to %s", r.NetworkID, r.EndpointID, r.SandboxKey)
+	return res, nil
 }
