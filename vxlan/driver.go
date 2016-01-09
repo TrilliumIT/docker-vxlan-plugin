@@ -11,18 +11,6 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const (
-	mtuOption        = "mtu"
-	bridgeNameOption = "bridgeName"
-	srcAddrOption    = "srcAddr"
-	groupOption      = "group"
-	ttlOption        = "ttl"
-	tosOption        = "tos"
-
-	bindInterfaceOption = "net.gopher.ovs.bridge.bind_interface"
-	defaultMTU          = 1500
-)
-
 type Driver struct {
 	network.Driver
 	networks map[string]*NetworkState
