@@ -5,7 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	dknet "github.com/docker/go-plugins-helpers/network"
+	"github.com/docker/go-plugins-helpers/network"
 )
 
 const (
@@ -39,6 +39,6 @@ func Run(ctx *cli.Context) {
 	if err != nil {
 		panic(err)
 	}
-	h := dknet.NewHandler(d)
+	h := network.NewHandler(d)
 	h.ServeUnix("root", "vxlan")
 }
