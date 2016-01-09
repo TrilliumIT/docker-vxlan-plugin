@@ -86,6 +86,109 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 							return err
 						}
 					}
+					if key == "VtepDev" {
+						vtepDev, err = netlink.LinkByName(val.(string))
+						if err != nil {
+							return err
+						}
+						vxlan.VtepDevIndex = vtepDev.Attrs().Index
+					}
+					if key == "SrcAddr" {
+						vxlan.SrcAddr, err = net.ParseIP(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "Group" {
+						vxlan.Group, err = net.ParseIP(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "TTL" {
+						vxlan.TTL, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "TOS" {
+						vxlan.TOS, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "Learning" {
+						vxlan.Learning, err = strconv.ParseBool(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "Proxy" {
+						vxlan.Proxy, err = strconv.ParseBool(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "RSC" {
+						vxlan.RSC, err = strconv.ParseBool(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "L2miss" {
+						vxlan.L2miss, err = strconv.ParseBool(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "L3miss" {
+						vxlan.L3miss, err = strconv.ParseBool(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "NoAge" {
+						vxlan.NoAge, err = strconv.ParseBool(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "GBP" {
+						vxlan.GBP, err = strconv.ParseBool(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "Age" {
+						vxlan.Age, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "Limit" {
+						vxlan.Limit, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "Port" {
+						vxlan.Port, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "PortLow" {
+						vxlan.PortLow, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "PortHigh" {
+						vxlan.PortHigh, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		}
