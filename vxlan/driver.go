@@ -39,13 +39,13 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	//	return "", fmt.Errorf("No options provided")
 	//}
 
-	vxlanName := "vx_42" // + name
+	vxlanName := "vx_" + name
 	vxlanID := 42
 	//if r.Options["vxlanID"] != nil {
 	//	vxlanID = r.Options["vxlanID"]
 	//}
 
-	bridgeName := "br_42" // + name
+	bridgeName := "br_" + name
 
 	bridge := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{Name: bridgeName},
