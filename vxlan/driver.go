@@ -42,44 +42,53 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	vxlanName := "vx_" + netID[0:12]
 	bridgeName := "br_" + netID[0:12]
 
-	// Parse interface name options
-	for k, v := range r.Options {
-		if k == "com.docker.network.generic" {
-			if genericOpts, ok := v.(map[string]interface{}); ok {
-				for key, val := range genericOpts {
-					log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
-					if key == "vxlanName" {
-						log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
-						vxlanName = val.(string)
-					}
-					if key == "bridgeName" {
-						log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
-						bridgeName = val.(string)
-					}
-				}
-			}
-		}
-	}
+	var bridgeLinkAttrs netlink.LinkAttrs
+	var vxlanLinkAttrs netlink.LinkAttrs
 
+	// Create interfaces
 	bridge := &netlink.Bridge{
-		LinkAttrs: netlink.LinkAttrs{Name: bridgeName},
+		LinkAttrs: &netlink.LinkAttrs,
 	}
 	vxlan := &netlink.Vxlan{
-		LinkAttrs: netlink.LinkAttrs{Name: vxlanName},
+		LinkAttrs: &netlink.LinkAttrs,
 	}
 
-	// Parse other options
+	// Parse interface options
 	for k, v := range r.Options {
 		if k == "com.docker.network.generic" {
 			if genericOpts, ok := v.(map[string]interface{}); ok {
 				for key, val := range genericOpts {
+					log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
 					if key == "vxlanName" {
-						continue
+						vxlan.LinkAttrs.Name = val.(string)
 					}
 					if key == "bridgeName" {
-						continue
+						bridge.LinkAttrs.Name = val.(string)
 					}
-					log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
+					if key == "vxlanMTU" {
+						vxlan.LinkAttrs.MTU, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "bridgeMTU" {
+						bridge.LinkAttrs.MTU, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "vxlanTxQLen" {
+						vxlan.LinkAttrs.TxQLen, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
+					if key == "bridgeTxQLen" {
+						bridge.LinkAttrs.TxQLen, err = strconv.Atoi(val.(string))
+						if err != nil {
+							return err
+						}
+					}
 					if key == "VxlanId" {
 						vxlan.VxlanId, err = strconv.Atoi(val.(string))
 						if err != nil {
