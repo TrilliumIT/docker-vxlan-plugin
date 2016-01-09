@@ -1,4 +1,4 @@
-package main
+package vxlan
 
 import (
 	"os"
@@ -6,7 +6,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	dknet "github.com/docker/go-plugins-helpers/network"
-	"vxlan"
 )
 
 const (
@@ -36,7 +35,7 @@ func Run(ctx *cli.Context) {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	d, err := vxlan.NewDriver()
+	d, err := NewDriver()
 	if err != nil {
 		panic(err)
 	}
