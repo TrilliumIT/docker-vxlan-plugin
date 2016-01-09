@@ -4,7 +4,7 @@ import (
 	//"fmt"
 	//"strings"
 	//"time"
-	//"net"
+	"net"
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
@@ -39,18 +39,16 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	netID := r.NetworkID
 	var err error
 
-	vxlanName := "vx_" + netID[0:12]
-	bridgeName := "br_" + netID[0:12]
-
-	var bridgeLinkAttrs netlink.LinkAttrs
-	var vxlanLinkAttrs netlink.LinkAttrs
-
 	// Create interfaces
 	bridge := &netlink.Bridge{
-		LinkAttrs: &netlink.LinkAttrs,
+		LinkAttrs: netlink.LinkAttrs{
+			Name: "br_" + netID[0:12],
+		},
 	}
 	vxlan := &netlink.Vxlan{
-		LinkAttrs: &netlink.LinkAttrs,
+		LinkAttrs: netlink.LinkAttrs{
+			Name: "vx_" + netID[0:12],
+		},
 	}
 
 	// Parse interface options
@@ -96,23 +94,17 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 						}
 					}
 					if key == "VtepDev" {
-						vtepDev, err = netlink.LinkByName(val.(string))
+						vtepDev, err := netlink.LinkByName(val.(string))
 						if err != nil {
 							return err
 						}
 						vxlan.VtepDevIndex = vtepDev.Attrs().Index
 					}
 					if key == "SrcAddr" {
-						vxlan.SrcAddr, err = net.ParseIP(val.(string))
-						if err != nil {
-							return err
-						}
+						vxlan.SrcAddr = net.ParseIP(val.(string))
 					}
 					if key == "Group" {
-						vxlan.Group, err = net.ParseIP(val.(string))
-						if err != nil {
-							return err
-						}
+						vxlan.Group = net.ParseIP(val.(string))
 					}
 					if key == "TTL" {
 						vxlan.TTL, err = strconv.Atoi(val.(string))
