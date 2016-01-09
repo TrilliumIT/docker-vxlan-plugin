@@ -4,9 +4,9 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/clinta/docker-vxlan-plugin/vxlan"
 	"github.com/codegangsta/cli"
 	dknet "github.com/docker/go-plugins-helpers/network"
+	"vxlan"
 )
 
 const (
