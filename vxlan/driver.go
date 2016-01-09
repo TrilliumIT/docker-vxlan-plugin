@@ -33,17 +33,19 @@ func NewDriver() (*Driver, error) {
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
 
+	name := r.NetworkID
+
 	//if r.Options == nil {
 	//	return "", fmt.Errorf("No options provided")
 	//}
 
-	vxlanName := "vxlan42"
+	vxlanName := "vx_42" // + name
 	vxlanID := 42
 	//if r.Options["vxlanID"] != nil {
 	//	vxlanID = r.Options["vxlanID"]
 	//}
 
-	bridgeName := "br_vxlan42"
+	bridgeName := "br_42" // + name
 
 	bridge := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{Name: bridgeName},
@@ -60,9 +62,18 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 		VXLan:  vxlan,
 		Bridge: bridge,
 	}
-	d.networks[r.NetworkID] = ns
+	d.networks[name] = ns
 
 	netlink.LinkSetMaster(vxlan, bridge)
+
+	return nil
+}
+
+func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
+	name := r.NetworkID
+
+	netlink.LinkDel(d.networks[name].VXLan)
+	netlink.LinkDel(d.networks[name].Bridge)
 
 	return nil
 }
