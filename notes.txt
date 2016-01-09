@@ -1,5 +1,0 @@
-Progress:
-  - (main.go 39) - vxlan.NewDriver():
-  - (main.go 43) - dknet.NewHandler(d):
-  - (main.go 44) - h.ServeUnix("root", "vxlan"):
-
