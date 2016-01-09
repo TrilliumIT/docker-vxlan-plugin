@@ -49,7 +49,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 			bridgeName = r.Options["bridgeName"].(string)
 		}
 	}
-	spew.dump(r.Options["vxlanName"])
+	spew.Dump(r.Options["vxlanName"].(string))
 
 	bridge := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{Name: bridgeName},
