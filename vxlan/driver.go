@@ -367,19 +367,21 @@ func (d *Driver) Leave(r *network.LeaveRequest) error {
 	// bring down the veth pair
 	err := netlink.LinkSetDown(veth)
 	if err != nil {
-		log.Warnf("Error enabling  Veth local iface: [ %v ]", veth)
+		log.Warnf("Error bring down Veth local iface: [ %v ]", veth)
 		return err
 	}
 
 	// remove veth from bridge
 	err = netlink.LinkSetNoMaster(veth)
 	if err != nil {
+		log.Warnf("Error removing veth from bridge")
 		return err
 	}
 
 	// delete the veth interface
 	err = netlink.LinkDel(veth)
 	if err != nil {
+		log.Warnf("Error removing veth interface")
 		return err
 	}
 
