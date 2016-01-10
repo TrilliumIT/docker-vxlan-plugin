@@ -10,7 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
 	//"github.com/samalba/dockerclient"
-	"github.com/davecgh/go-spew/spew"
+	//"github.com/davecgh/go-spew/spew"
 	"github.com/vishvananda/netlink"
 )
 
@@ -22,9 +22,11 @@ type Driver struct {
 // NetworkState is filled in at network creation time
 // it contains state that we wish to keep for each network
 type NetworkState struct {
-	Bridge  *netlink.Bridge
-	VXLan   *netlink.Vxlan
-	Gateway string
+	Bridge   *netlink.Bridge
+	VXLan    *netlink.Vxlan
+	Gateway  string
+	IPv4Data []*network.IPAMData
+	IPv6Data []*network.IPAMData
 }
 
 func NewDriver() (*Driver, error) {
@@ -36,7 +38,6 @@ func NewDriver() (*Driver, error) {
 
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
-	spew.Dump(r)
 
 	netID := r.NetworkID
 	var err error
@@ -255,9 +256,32 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 
 	// store interfaces to be used later
 	ns := &NetworkState{
-		VXLan:  vxlan,
-		Bridge: bridge,
+		VXLan:    vxlan,
+		Bridge:   bridge,
+		IPv4Data: r.IPv4Data,
+		IPv6Data: r.IPv6Data,
 	}
+
+	// Add IPs to interfaces
+	// Process IPv6 first. If both are inclued, IPv4 gateway will be the one that
+	// remains, because JoinResponse can only include one Gateway
+	for i := range r.IPv6Data {
+		gatewayIP, err := netlink.ParseAddr(r.IPv6Data[i].Gateway)
+		if err != nil {
+			return err
+		}
+		ns.Gateway = r.IPv6Data[i].Gateway
+		netlink.AddrAdd(bridge, gatewayIP)
+	}
+	for i := range r.IPv4Data {
+		gatewayIP, err := netlink.ParseAddr(r.IPv4Data[i].Gateway)
+		if err != nil {
+			return err
+		}
+		ns.Gateway = r.IPv4Data[i].Gateway
+		netlink.AddrAdd(bridge, gatewayIP)
+	}
+
 	d.networks[netID] = ns
 
 	return nil
