@@ -42,8 +42,8 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	netID := r.NetworkID
 	var err error
 
-	bridgeName := "br_" + netID[0:12]
-	vxlanName := "br_" + netID[0:12]
+	bridgeName := "br_" + netID[:12]
+	vxlanName := "vx_" + netID[:12]
 
 	// get interface names from options first
 	for k, v := range r.Options {
