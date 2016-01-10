@@ -10,7 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
 	//"github.com/samalba/dockerclient"
-	//"github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/vishvananda/netlink"
 )
 
@@ -36,6 +36,7 @@ func NewDriver() (*Driver, error) {
 
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
+	spew.Dump(r)
 
 	netID := r.NetworkID
 	var err error
