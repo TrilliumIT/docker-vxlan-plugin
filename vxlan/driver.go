@@ -270,7 +270,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 		if err != nil {
 			return err
 		}
-		ns.Gateway = r.IPv6Data[i].Gateway
+		ns.Gateway = gatewayIP.IP.String()
 		netlink.AddrAdd(bridge, gatewayIP)
 	}
 	for i := range r.IPv4Data {
@@ -278,7 +278,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 		if err != nil {
 			return err
 		}
-		ns.Gateway = r.IPv4Data[i].Gateway
+		ns.Gateway = gatewayIP.IP.String()
 		netlink.AddrAdd(bridge, gatewayIP)
 	}
 
@@ -354,4 +354,34 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	}
 	log.Debugf("Join endpoint %s:%s to %s", r.NetworkID, r.EndpointID, r.SandboxKey)
 	return res, nil
+}
+
+func (d *Driver) Leave(r *network.LeaveRequest) error {
+	log.Debugf("Leave request: %+v", r)
+
+	veth := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5]},
+		PeerName:  "ethc" + r.EndpointID[:5],
+	}
+
+	// bring down the veth pair
+	err := netlink.LinkSetDown(veth)
+	if err != nil {
+		log.Warnf("Error enabling  Veth local iface: [ %v ]", veth)
+		return err
+	}
+
+	// remove veth from bridge
+	err = netlink.LinkSetNoMaster(veth)
+	if err != nil {
+		return err
+	}
+
+	// delete the veth interface
+	err = netlink.LinkDel(veth)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
