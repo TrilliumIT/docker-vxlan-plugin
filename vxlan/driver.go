@@ -14,7 +14,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-type NetDriver struct {
+type Driver struct {
 	network.Driver
 	networks map[string]*NetworkState
 }
@@ -29,14 +29,14 @@ type NetworkState struct {
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver() (*NetDriver, error) {
-	d := &NetDriver{
+func NewDriver() (*Driver, error) {
+	d := &Driver{
 		networks: make(map[string]*NetworkState),
 	}
 	return d, nil
 }
 
-func (d *NetDriver) CreateNetwork(r *network.CreateNetworkRequest) error {
+func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
 
 	netID := r.NetworkID
@@ -287,7 +287,7 @@ func (d *NetDriver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	return nil
 }
 
-func (d *NetDriver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
+func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	netID := r.NetworkID
 
 	err := netlink.LinkDel(d.networks[netID].VXLan)
@@ -302,24 +302,24 @@ func (d *NetDriver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	return nil
 }
 
-func (d *NetDriver) CreateEndpoint(r *network.CreateEndpointRequest) error {
+func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
 	log.Debugf("Create endpoint request: %+v", r)
 	return nil
 }
 
-func (d *NetDriver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
+func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
 	return nil
 }
 
-func (d *NetDriver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, error) {
+func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, error) {
 	res := &network.InfoResponse{
 		Value: make(map[string]string),
 	}
 	return res, nil
 }
 
-func (d *NetDriver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
+func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	// create and attach local name to the bridge
 	veth := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5]},
@@ -356,7 +356,7 @@ func (d *NetDriver) Join(r *network.JoinRequest) (*network.JoinResponse, error) 
 	return res, nil
 }
 
-func (d *NetDriver) Leave(r *network.LeaveRequest) error {
+func (d *Driver) Leave(r *network.LeaveRequest) error {
 	log.Debugf("Leave request: %+v", r)
 
 	veth := &netlink.Veth{
