@@ -19,12 +19,18 @@ func main() {
 		Name:  "debug, d",
 		Usage: "enable debugging",
 	}
+        var flagScope = cli.StringFlag{
+                Name: "scope"
+                Value: "local"
+                Usage: "Scope of the network. local or global."
+        }
 	app := cli.NewApp()
 	app.Name = "don"
 	app.Usage = "Docker vxLan Networking"
 	app.Version = version
 	app.Flags = []cli.Flag{
 		flagDebug,
+                flagScope,
 	}
 	app.Action = Run
 	app.Run(os.Args)
@@ -35,8 +41,7 @@ func Run(ctx *cli.Context) {
 	if ctx.Bool("debug") {
 		log.SetLevel(log.DebugLevel)
 	}
-
-	d, err := vxlan.NewDriver()
+	d, err := vxlan.NewDriver(ctx.String("scope"))
 	if err != nil {
 		panic(err)
 	}

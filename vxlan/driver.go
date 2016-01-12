@@ -22,15 +22,16 @@ type Driver struct {
 // NetworkState is filled in at network creation time
 // it contains state that we wish to keep for each network
 type NetworkState struct {
-	Bridge   *netlink.Bridge
-	VXLan    *netlink.Vxlan
+	Bridge	 *netlink.Bridge
+	VXLan	 *netlink.Vxlan
 	Gateway  string
 	IPv4Data []*network.IPAMData
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver() (*Driver, error) {
+func NewDriver(scope string) (*Driver, error) {
 	d := &Driver{
+		scope: scope
 		networks: make(map[string]*NetworkState),
 	}
 	return d, nil
@@ -39,10 +40,10 @@ func NewDriver() (*Driver, error) {
 func (d *Driver) GetCapabilities() (*network.GetCapabilitiesResponse, error) {
 	log.Debugf("Get Capabilities request")
 	res := &network.GetCapabilitiesResponse{
-		Scope: "global",
+		Scope: d.scope,
 	}
-        log.Debugf("Responding with %+v", res)
-        return res, nil
+	log.Debugf("Responding with %+v", res)
+	return res, nil
 }
 
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
@@ -261,11 +262,11 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	err = netlink.LinkSetUp(vxlan)
 	if err != nil {
 		return err
-	}
+       }
 
 	// store interfaces to be used later
 	ns := &NetworkState{
-		VXLan:    vxlan,
+		VXLan:	  vxlan,
 		Bridge:   bridge,
 		IPv4Data: r.IPv4Data,
 		IPv6Data: r.IPv6Data,
