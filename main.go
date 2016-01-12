@@ -24,6 +24,11 @@ func main() {
                 Value: "local",
                 Usage: "Scope of the network. local or global.",
         }
+        var flagVtepDev = cli.StringFlag{
+                Name: "vtepdev",
+                Value: "",
+                Usage: "VTEP device.",
+        }
 	app := cli.NewApp()
 	app.Name = "don"
 	app.Usage = "Docker vxLan Networking"
@@ -31,6 +36,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		flagDebug,
                 flagScope,
+                flagVtepDev,
 	}
 	app.Action = Run
 	app.Run(os.Args)
@@ -41,7 +47,7 @@ func Run(ctx *cli.Context) {
 	if ctx.Bool("debug") {
 		log.SetLevel(log.DebugLevel)
 	}
-	d, err := vxlan.NewDriver(ctx.String("scope"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"))
 	if err != nil {
 		panic(err)
 	}

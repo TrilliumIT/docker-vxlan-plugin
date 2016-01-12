@@ -4,8 +4,9 @@ import (
 	//"fmt"
 	//"strings"
 	//"time"
-	"net"
+	gonet "net"
 	"strconv"
+	"errors"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/clinta/go-plugins-helpers/network"
@@ -16,7 +17,8 @@ import (
 
 type Driver struct {
 	network.Driver
-	scope    string
+	scope	 string
+	vtepdev  string
 	networks map[string]*NetworkState
 }
 
@@ -30,9 +32,10 @@ type NetworkState struct {
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver(scope string) (*Driver, error) {
+func NewDriver(scope string, vtepdev string) (*Driver, error) {
 	d := &Driver{
 		scope: scope,
+		vtepdev: vtepdev,
 		networks: make(map[string]*NetworkState),
 	}
 	return d, nil
@@ -47,37 +50,178 @@ func (d *Driver) GetCapabilities() (*network.CapabilitiesResponse, error) {
 	return res, nil
 }
 
-func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
-	log.Debugf("Create network request: %+v", r)
+type intNames struct {
+	VxlanName  string
+	BridgeName string
+}
 
-	netID := r.NetworkID
-	var err error
+func getIntNames(netID string) (*intNames, error) {
+	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	net, err := docker.InspectNetwork(netID)
+	if err != nil {
+		return nil, err
+	}
 
-	bridgeName := "br_" + netID[:12]
-	vxlanName := "vx_" + netID[:12]
+	names := &intNames{}
+
+	if net.Driver != "vxlan" {
+		log.Errorf("Network %v is not a vxlan network", netID)
+		return nil, errors.New("Not a vxlan network")
+	}
+
+	names.BridgeName = "br_" + netID[:12]
+	names.VxlanName = "vx_" + netID[:12]
 
 	// get interface names from options first
-	for k, v := range r.Options {
-		if k == "com.docker.network.generic" {
-			if genericOpts, ok := v.(map[string]interface{}); ok {
-				for key, val := range genericOpts {
-					if key == "vxlanName" {
-						vxlanName = val.(string)
-					}
-					if key == "bridgeName" {
-						bridgeName = val.(string)
-					}
-				}
-			}
+	for k, v := range net.Options {
+		if k == "vxlanName" {
+			names.VxlanName = v
+		}
+		if k == "bridgeName" {
+			names.BridgeName = v
 		}
 	}
 
-	// create links
+	return names, nil
+}
+
+func getGateway(netID string) (string, error) {
+	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	net, err := docker.InspectNetwork(netID)
+        if err != nil {
+                return "", err
+        }
+
+        for i := range net.IPAM.Config {
+                if net.IPAM.Config[i].Gateway != "" {
+                        return net.IPAM.Config[i].Gateway, nil
+                }
+        }
+        return "", nil
+}
+
+type intLinks struct {
+        Vxlan  *netlink.Vxlan
+        Bridge *netlink.Bridge
+}
+
+// this function gets netlink devices or creates them if they don't exist
+func (d *Driver) getLinks(netID string) (*intLinks, error) {
+	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	net, err := docker.InspectNetwork(netID)
+	if err != nil {
+		return nil, err
+	}
+
+	spew.Dump(net)
+
+	if net.Driver != "vxlan" {
+		log.Errorf("Network %v is not a vxlan network", netID)
+		return nil, errors.New("Not a vxlan network")
+	}
+
+	names, err := getIntNames(netID)
+	if err != nil {
+		return nil, err
+	}
+
+	// get or create links
+        var bridge *netlink.Bridge
+        bridgelink, err := netlink.LinkByName(names.BridgeName)
+        if err == nil {
+                bridge = &netlink.Bridge{
+                        LinkAttrs: *bridgelink.Attrs(),
+                }
+        } else {
+                bridge, err = d.createBridge(names.BridgeName, net)
+                if err != nil {
+                        return nil, err
+                }
+        }
+        var vxlan *netlink.Vxlan
+        vxlanlink, err := netlink.LinkByName(names.VxlanName)
+        if err == nil {
+                vxlan = &netlink.Vxlan{
+                        LinkAttrs: *vxlanlink.Attrs(),
+                }
+        } else {
+                vxlan, err = d.createVxLan(names.VxlanName, net)
+                if err != nil {
+                        return nil, err
+                }
+        }
+
+	// add vxlan to bridge
+        if vxlan.LinkAttrs.MasterIndex == 0 {
+                err = netlink.LinkSetMaster(vxlan, bridge)
+                if err != nil {
+                        return nil, err
+                }
+        }
+
+        links := &intLinks{
+                Vxlan: vxlan,
+                Bridge: bridge,
+        }
+
+        return links, nil
+}
+
+func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResource) (*netlink.Bridge, error) {
 	bridge := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: bridgeName,
 		},
 	}
+	// Parse interface options
+	for k, v := range net.Options {
+		if k == "bridgeMTU" {
+                        mtu, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+                        bridge.LinkAttrs.MTU = mtu
+		}
+		if k == "bridgeHardwareAddr" {
+                        hardwareAddr, err := gonet.ParseMAC(v)
+			if err != nil {
+				return nil, err
+			}
+                        bridge.LinkAttrs.HardwareAddr = hardwareAddr
+		}
+		if k == "bridgeTxQLen" {
+                        txQLen, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+                        bridge.LinkAttrs.TxQLen = txQLen
+		}
+	}
+
+        err := netlink.LinkAdd(bridge)
+	if err != nil {
+		return nil, err
+	}
+
+	err = netlink.LinkSetUp(bridge)
+	if err != nil {
+		return nil, err
+	}
+
+        if d.scope == "local" {
+                for i := range net.IPAM.Config {
+                        gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway)
+                        if err != nil {
+                                return nil, err
+                        }
+                        netlink.AddrAdd(bridge, gatewayIP)
+                }
+        }
+
+        return bridge, nil
+}
+
+func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource) (*netlink.Vxlan, error) {
 	vxlan := &netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: vxlanName,
@@ -85,241 +229,229 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	}
 
 	// Parse interface options
-	for k, v := range r.Options {
-		if k == "com.docker.network.generic" {
-			if genericOpts, ok := v.(map[string]interface{}); ok {
-				for key, val := range genericOpts {
-					log.Debugf("Libnetwork Opts Sent: [ %s ] Value: [ %s ]", key, val)
-					if key == "vxlanMTU" {
-						vxlan.LinkAttrs.MTU, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "bridgeMTU" {
-						bridge.LinkAttrs.MTU, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "vxlanHardwareAddr" {
-						vxlan.LinkAttrs.HardwareAddr, err = net.ParseMAC(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "bridgeHardwareAddr" {
-						bridge.LinkAttrs.HardwareAddr, err = net.ParseMAC(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "vxlanTxQLen" {
-						vxlan.LinkAttrs.TxQLen, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "bridgeTxQLen" {
-						bridge.LinkAttrs.TxQLen, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "VxlanId" {
-						vxlan.VxlanId, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "VtepDev" {
-						vtepDev, err := netlink.LinkByName(val.(string))
-						if err != nil {
-							return err
-						}
-						vxlan.VtepDevIndex = vtepDev.Attrs().Index
-					}
-					if key == "SrcAddr" {
-						vxlan.SrcAddr = net.ParseIP(val.(string))
-					}
-					if key == "Group" {
-						vxlan.Group = net.ParseIP(val.(string))
-					}
-					if key == "TTL" {
-						vxlan.TTL, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "TOS" {
-						vxlan.TOS, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "Learning" {
-						vxlan.Learning, err = strconv.ParseBool(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "Proxy" {
-						vxlan.Proxy, err = strconv.ParseBool(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "RSC" {
-						vxlan.RSC, err = strconv.ParseBool(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "L2miss" {
-						vxlan.L2miss, err = strconv.ParseBool(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "L3miss" {
-						vxlan.L3miss, err = strconv.ParseBool(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "NoAge" {
-						vxlan.NoAge, err = strconv.ParseBool(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "GBP" {
-						vxlan.GBP, err = strconv.ParseBool(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "Age" {
-						vxlan.Age, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "Limit" {
-						vxlan.Limit, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "Port" {
-						vxlan.Port, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "PortLow" {
-						vxlan.PortLow, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-					if key == "PortHigh" {
-						vxlan.PortHigh, err = strconv.Atoi(val.(string))
-						if err != nil {
-							return err
-						}
-					}
-				}
+	for k, v := range net.Options {
+		if k == "vxlanMTU" {
+                        MTU, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
 			}
+			vxlan.LinkAttrs.MTU = MTU
+		}
+		if k == "vxlanHardwareAddr" {
+                        HardwareAddr, err := gonet.ParseMAC(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.LinkAttrs.HardwareAddr = HardwareAddr
+		}
+		if k == "vxlanTxQLen" {
+                        TxQLen, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.LinkAttrs.TxQLen = TxQLen
+		}
+		if k == "VxlanId" {
+                        VxlanId, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.VxlanId = VxlanId
+		}
+		if k == "VtepDev" {
+			vtepDev, err := netlink.LinkByName(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.VtepDevIndex = vtepDev.Attrs().Index
+		}
+		if k == "SrcAddr" {
+			vxlan.SrcAddr = gonet.ParseIP(v)
+		}
+		if k == "Group" {
+			vxlan.Group = gonet.ParseIP(v)
+		}
+		if k == "TTL" {
+                        TTL, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.TTL = TTL
+		}
+		if k == "TOS" {
+                        TOS, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.TOS = TOS
+		}
+		if k == "Learning" {
+                        Learning, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.Learning = Learning
+		}
+		if k == "Proxy" {
+                        Proxy, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.Proxy = Proxy
+		}
+		if k == "RSC" {
+                        RSC, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.RSC = RSC
+		}
+		if k == "L2miss" {
+                        L2miss, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.L2miss = L2miss
+		}
+		if k == "L3miss" {
+                        L3miss, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.L3miss = L3miss
+		}
+		if k == "NoAge" {
+                        NoAge, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.NoAge = NoAge
+		}
+		if k == "GBP" {
+                        GBP, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.GBP = GBP
+		}
+		if k == "Age" {
+                        Age, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.Age = Age
+		}
+		if k == "Limit" {
+                        Limit, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.Limit = Limit
+		}
+		if k == "Port" {
+                        Port, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.Port = Port
+		}
+		if k == "PortLow" {
+                        PortLow, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.PortLow = PortLow
+		}
+		if k == "PortHigh" {
+                        PortHigh, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.PortHigh = PortHigh
 		}
 	}
-	// Done parsing options
 
-	// delete links if they already exist, don't worry about errors
-	netlink.LinkDel(bridge)
-	netlink.LinkDel(vxlan)
-
-	// add links
-	err = netlink.LinkAdd(bridge)
-	if err != nil {
-		return err
-	}
-	err = netlink.LinkAdd(vxlan)
-	if err != nil {
-		return err
+	if d.vtepdev != "" {
+		vtepDev, err := netlink.LinkByName(d.vtepdev)
+		if err != nil {
+			return nil, err
+		}
+		vxlan.VtepDevIndex = vtepDev.Attrs().Index
 	}
 
-	// add vxlan to bridge
-	err = netlink.LinkSetMaster(vxlan, bridge)
-	if err != nil {
-		return err
-	}
+        err := netlink.LinkAdd(vxlan)
+        if err != nil {
+                return nil, err
+        }
 
-	// bring interfaces up
-	err = netlink.LinkSetUp(bridge)
-	if err != nil {
-		return err
-	}
-	err = netlink.LinkSetUp(vxlan)
-	if err != nil {
-		return err
-       }
+        // bring interfaces up
+        err = netlink.LinkSetUp(vxlan)
+        if err != nil {
+                return nil, err
+        }
 
-	// store interfaces to be used later
-	ns := &NetworkState{
-		VXLan:	  vxlan,
-		Bridge:   bridge,
-		IPv4Data: r.IPv4Data,
-		IPv6Data: r.IPv6Data,
-	}
+        return vxlan, nil
+}
 
-	// Add IPs to interfaces
-	// Process IPv6 first. If both are inclued, IPv4 gateway will be the one that
-	// remains, because JoinResponse can only include one Gateway
-	for i := range r.IPv6Data {
-		gatewayIP, err := netlink.ParseAddr(r.IPv6Data[i].Gateway)
+func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
+	log.Debugf("Create network request: %+v", r)
+
+	// return nil and lazy create the network when a container joins it
+	return nil
+}
+
+func (d *Driver) deleteNics(netID string) error {
+	names, err := getIntNames(netID)
+        if err != nil {
+                return err
+        }
+
+	vxlan, err := netlink.LinkByName(names.VxlanName)
+	if err == nil {
+		err := netlink.LinkDel(vxlan)
 		if err != nil {
 			return err
 		}
-		ns.Gateway = gatewayIP.IP.String()
-		netlink.AddrAdd(bridge, gatewayIP)
 	}
-	for i := range r.IPv4Data {
-		gatewayIP, err := netlink.ParseAddr(r.IPv4Data[i].Gateway)
+	bridge, err := netlink.LinkByName(names.BridgeName)
+	if err == nil {
+		err := netlink.LinkDel(bridge)
 		if err != nil {
 			return err
 		}
-		ns.Gateway = gatewayIP.IP.String()
-		netlink.AddrAdd(bridge, gatewayIP)
 	}
-
-	d.networks[netID] = ns
-
 	return nil
 }
 
 func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	netID := r.NetworkID
-
-	err := netlink.LinkDel(d.networks[netID].VXLan)
-	if err != nil {
-		return err
-	}
-	err = netlink.LinkDel(d.networks[netID].Bridge)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d.deleteNics(netID)
 }
 
 func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
 	log.Debugf("Create endpoint request: %+v", r)
+	netID := r.NetworkID
+        // get the links
+        _, err := d.getLinks(netID)
+        if err != nil {
+                return err
+        }
 	return nil
 }
 
 func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
+	netID := r.NetworkID
+
+	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	net, err := docker.InspectNetwork(netID)
+	if err != nil {
+		return err
+	}
+
+        if len(net.Containers) == 0 {
+                return d.deleteNics(netID)
+        }
 	return nil
 }
 
@@ -331,6 +463,12 @@ func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, er
 }
 
 func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
+	netID := r.NetworkID
+        // get the links
+        links, err := d.getLinks(netID)
+        if err != nil {
+                return nil, err
+        }
 	// create and attach local name to the bridge
 	veth := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5]},
@@ -342,34 +480,29 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	}
 
 	// bring up the veth pair
-	err := netlink.LinkSetUp(veth)
+	err = netlink.LinkSetUp(veth)
 	if err != nil {
 		log.Warnf("Error enabling  Veth local iface: [ %v ]", veth)
 		return nil, err
 	}
 	
-	if d.networks[r.NetworkID] == nil && d.scope == "global" {
-		docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
-		spew.Dump(docker.InspectNetwork(r.NetworkID))
-		//r := &CreateNetworkRequest{
-		//	NetworkID: r.NetworkID,
-		//}
-	}
-
-	bridge := d.networks[r.NetworkID].Bridge
 	// add veth to bridge
-	err = netlink.LinkSetMaster(veth, bridge)
+	err = netlink.LinkSetMaster(veth, links.Bridge)
 	if err != nil {
 		return nil, err
 	}
 
 	// SrcName gets renamed to DstPrefix + ID on the container iface
+        gateway, err := getGateway(netID)
+        if err != nil {
+                return nil, err
+        }
 	res := &network.JoinResponse{
 		InterfaceName: network.InterfaceName{
 			SrcName:   veth.PeerName,
 			DstPrefix: "eth",
 		},
-		Gateway: d.networks[r.NetworkID].Gateway,
+		Gateway: gateway,
 	}
 	log.Debugf("Join endpoint %s:%s to %s", r.NetworkID, r.EndpointID, r.SandboxKey)
 	return res, nil
