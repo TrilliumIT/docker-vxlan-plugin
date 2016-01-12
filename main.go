@@ -6,7 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/clinta/docker-vxlan-plugin/vxlan"
 	"github.com/codegangsta/cli"
-	"github.com/docker/go-plugins-helpers/network"
+	"github.com/clinta/go-plugins-helpers/network"
 )
 
 const (

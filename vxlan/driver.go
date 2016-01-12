@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/go-plugins-helpers/network"
+	"github.com/clinta/go-plugins-helpers/network"
 	//"github.com/samalba/dockerclient"
 	//"github.com/davecgh/go-spew/spew"
 	"github.com/vishvananda/netlink"
@@ -34,6 +34,15 @@ func NewDriver() (*Driver, error) {
 		networks: make(map[string]*NetworkState),
 	}
 	return d, nil
+}
+
+func (d *Driver) GetCapabilities() (*network.GetCapabilitiesResponse, error) {
+	log.Debugf("Get Capabilities request")
+	res := &network.GetCapabilitiesResponse{
+		Scope: "global",
+	}
+        log.Debugf("Responding with %+v", res)
+        return res, nil
 }
 
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
