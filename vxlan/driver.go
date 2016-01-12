@@ -16,6 +16,7 @@ import (
 
 type Driver struct {
 	network.Driver
+	scope    string
 	networks map[string]*NetworkState
 }
 
@@ -31,7 +32,7 @@ type NetworkState struct {
 
 func NewDriver(scope string) (*Driver, error) {
 	d := &Driver{
-		scope: scope
+		scope: scope,
 		networks: make(map[string]*NetworkState),
 	}
 	return d, nil

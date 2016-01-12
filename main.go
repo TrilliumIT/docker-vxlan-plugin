@@ -20,9 +20,9 @@ func main() {
 		Usage: "enable debugging",
 	}
         var flagScope = cli.StringFlag{
-                Name: "scope"
-                Value: "local"
-                Usage: "Scope of the network. local or global."
+                Name: "scope",
+                Value: "local",
+                Usage: "Scope of the network. local or global.",
         }
 	app := cli.NewApp()
 	app.Name = "don"
