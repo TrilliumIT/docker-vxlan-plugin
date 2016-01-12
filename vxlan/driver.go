@@ -9,8 +9,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/clinta/go-plugins-helpers/network"
-	//"github.com/samalba/dockerclient"
-	//"github.com/davecgh/go-spew/spew"
+	"github.com/samalba/dockerclient"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/vishvananda/netlink"
 )
 
@@ -38,9 +38,9 @@ func NewDriver(scope string) (*Driver, error) {
 	return d, nil
 }
 
-func (d *Driver) GetCapabilities() (*network.GetCapabilitiesResponse, error) {
+func (d *Driver) GetCapabilities() (*network.CapabilitiesResponse, error) {
 	log.Debugf("Get Capabilities request")
-	res := &network.GetCapabilitiesResponse{
+	res := &network.CapabilitiesResponse{
 		Scope: d.scope,
 	}
 	log.Debugf("Responding with %+v", res)
@@ -346,6 +346,14 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	if err != nil {
 		log.Warnf("Error enabling  Veth local iface: [ %v ]", veth)
 		return nil, err
+	}
+	
+	if d.networks[r.NetworkID] == nil && d.scope == "global" {
+		docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+		spew.Dump(docker.InspectNetwork(r.NetworkID))
+		//r := &CreateNetworkRequest{
+		//	NetworkID: r.NetworkID,
+		//}
 	}
 
 	bridge := d.networks[r.NetworkID].Bridge
