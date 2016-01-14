@@ -5,12 +5,12 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/clinta/docker-vxlan-plugin/vxlan"
-	"github.com/codegangsta/cli"
 	"github.com/clinta/go-plugins-helpers/network"
+	"github.com/codegangsta/cli"
 )
 
 const (
-	version = "0.1"
+	version = "0.2"
 )
 
 func main() {
@@ -19,24 +19,24 @@ func main() {
 		Name:  "debug, d",
 		Usage: "enable debugging",
 	}
-        var flagScope = cli.StringFlag{
-                Name: "scope",
-                Value: "local",
-                Usage: "Scope of the network. local or global.",
-        }
-        var flagVtepDev = cli.StringFlag{
-                Name: "vtepdev",
-                Value: "",
-                Usage: "VTEP device.",
-        }
+	var flagScope = cli.StringFlag{
+		Name:  "scope",
+		Value: "local",
+		Usage: "Scope of the network. local or global.",
+	}
+	var flagVtepDev = cli.StringFlag{
+		Name:  "vtepdev",
+		Value: "",
+		Usage: "VTEP device.",
+	}
 	app := cli.NewApp()
 	app.Name = "don"
 	app.Usage = "Docker vxLan Networking"
 	app.Version = version
 	app.Flags = []cli.Flag{
 		flagDebug,
-                flagScope,
-                flagVtepDev,
+		flagScope,
+		flagVtepDev,
 	}
 	app.Action = Run
 	app.Run(os.Args)
