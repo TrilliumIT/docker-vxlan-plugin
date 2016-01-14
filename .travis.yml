@@ -4,6 +4,6 @@ deploy:
   provider: releases
   api_key:
     secure: u33SSTfOE46yZ93W1Sh7xxemPf0ofebvygIGaR0cYiyamc98cRSYghNRL7enDupYprzrHesws7ERXkIOXFcqoHrfuxUnzzQAntlQsFNS/h/jieSDPH37l6tISJGYWj41anZ0c5lZOsurTpqKqB5g5Cq/+PPk9xn9a1bKQaH2SoLbCjgsJ9S/VlbX6FsduYnpS7Uo2dqxmJA1HkxCxebZvi/Iv4uS7P9fV4/vOYjftFrnPsDPkQbqbtsun1aeGf/hveSxe0ztCyTd0quTmhH5yxzg2cR9KVHrkTXg+qHqDrMcqdwzYP3zrx9EB//lsxwFPlwQUiIASebF49wRWst8FkQA4aAnpJN002/jeaKTaAqhwXLRNROFqFGioS2/WacHUQvAwo6ayiFdfiCkvM/yiI9mnroK0z6PAqZJqA9pVpF+dVcSJp4NDFXVdCGqA80YYYLES74zWtIYp/lwqWXOWc//Q7hWF/0Wp2uOlqzePbstItlXZeT6jvrJUEEoZ2dqoguaBXBxmqlwjVWMPuzvhwHEjg3bFmBAV8EPn8hg8z29zwWhbcTY40HWRWSPh53dS1Y9y192QcXcaDK7ecMahUy6WhYkxfyOvfYHvioj487tp+DYQywzk8EeUU2Sl+HFPwbMDLTtj2EjOFuMXMsy8mlpoc9ci4lkzc65kXoKWi4=
-  file: docker-vxlan-plugin
+  file: $GOPATH/bin/docker-vxlan-plugin
   on:
     tags: true
