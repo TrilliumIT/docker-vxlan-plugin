@@ -1,7 +1,7 @@
 docker-vxlan-plugin is a vxlan plugin for docker that enables plumbing docker containers into an existing vxlan network.
 
 ## Use Cases
-The out of box networking options for docker are built around a use case common to deployment on managed virtual servers where each host has a single public IP address. They are not well suited to bare metal datacenter deployments where routing can be controlled and multiple layers of nat is undesirable. This plugin does not nat your containers and assumes that you're running it in an environment where you know how to distribute routes to your vxlan network.
+The out of box networking options for docker are built around a use case common to deployment on managed virtual servers where each host has a single public IP address. They are not well suited to bare metal datacenter deployments where routing can be controlled and multiple layers of nat is undesirable. This plugin does not nat your containers and assumes that you're running it in an environment where you know how to distribute routes to your vxlan network. If you run in global mode it is expected that you will set the gateway to the IP address of another router that already exists on your vxlan network.
 
 ## How it works
 When a container joins a network created with the vxlan driver if they don't already exist a vxlan interface and linux bridge interface are created. The vxlan interface is added to the bridge. The veth device is then created and the host side of the veth is added to the bridge, the container side is passed back to the docker daemon to be put in the container's namespace.
