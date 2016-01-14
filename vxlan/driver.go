@@ -11,7 +11,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/clinta/go-plugins-helpers/network"
 	"github.com/samalba/dockerclient"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/vishvananda/netlink"
 )
 
@@ -112,8 +111,6 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	spew.Dump(net)
 
 	if net.Driver != "vxlan" {
 		log.Errorf("Network %v is not a vxlan network", netID)
@@ -252,11 +249,14 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 			vxlan.LinkAttrs.TxQLen = TxQLen
 		}
 		if k == "VxlanId" {
-                        VxlanId, err := strconv.Atoi(v)
+                        log.Debugf("VxlanID: %+v", v)
+                        VxlanId, err := strconv.ParseInt(v, 0, 32)
 			if err != nil {
 				return nil, err
 			}
-			vxlan.VxlanId = VxlanId
+                        log.Debugf("VxlanID: %+v", VxlanId)
+                        log.Debugf("int(VxlanID): %+v", int(VxlanId))
+			vxlan.VxlanId = int(VxlanId)
 		}
 		if k == "VtepDev" {
 			vtepDev, err := netlink.LinkByName(v)
