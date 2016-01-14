@@ -7,10 +7,10 @@ Install docker, docker-machine and docker-compose and virtualbox. Start by creat
 ```
 $ docker-machine create -d virtualbox default
 $ eval "$(docker-machine env default)"
-$ docker run swarm create
+$ TOKEN=$(docker run swarm create 2> /dev/null)
 ```
 
-Copy the token returned as the last line output from `docker swarm create`.
+This will store a unique swarm token as $TOKEN in your shell.
 
 2. Create your swarm manager. Note the `iptables=false` and `ip-masq=false` these tell Docker to not NAT our containers and not mess with the iptables rules. This guide assumes you know how and want to manage your NAT and firewall yourself.
 
@@ -19,9 +19,9 @@ $ docker-machine create \
     -d virtualbox \
     --swarm \
     --swarm-master \
-    --swarm-discovery token://<TOKEN-FROM-ABOVE> \
-    --iptables=false \
-    --ip-masq=false \
+    --swarm-discovery token://$TOKEN \
+    --engine-opt iptables=false \
+    --engine-opt ip-masq=false \
     swarm-master
 ```
 
@@ -31,17 +31,17 @@ $ docker-machine create \
 $ docker-machine create \
     -d virtualbox \
     --swarm \
-    --swarm-discovery token://<TOKEN-FROM-ABOVE> \
-    --iptables=false \
-    --ip-masq=false \
+    --swarm-discovery token://$TOKEN \
+    --engine-opt iptables=false \
+    --engine-opt ip-masq=false \
     swarm-agent-00
 
 $ docker-machine create \
     -d virtualbox \
     --swarm \
-    --swarm-discovery token://<TOKEN-FROM-ABOVE> \
-    --iptables=false \
-    --ip-masq=false \
+    --swarm-discovery token://$TOKEN \
+    --engine-opt iptables=false \
+    --engine-opt ip-masq=false \
     swarm-agent-01
 ```
 
