@@ -6,6 +6,11 @@ services:
   - docker
 
 script:
+        
+  - curl -Ls https://github.com/Masterminds/glide/releases/download/${GLIDE_VERSION}/glide-${GLIDE_VERSION}-linux-amd64.tar.gz | tar -xz --strip-components=1 -C /tmp
+  - mv /tmp/glide /usr/local/bin/
+  - rm -rf /tmp/*
+  - glide install
   - go get .
   - mv $GOPATH/bin/docker-vxlan-plugin ./
   - docker build -t $DOCKER_IMAGE_NAME .
@@ -14,6 +19,8 @@ script:
 
 env:  
   - DOCKER_IMAGE_NAME=clinta/docker-vxlan-plugin
+  - GLIDE_VERSION=0.8.3
+  - GO15VENDOREXPERIMENT=1
 
 deploy:
   provider: releases
