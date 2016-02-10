@@ -1,9 +1,6 @@
 package vxlan
 
 import (
-	//"fmt"
-	//"strings"
-	//"time"
 	gonet "net"
 	"strconv"
 	"errors"
@@ -19,6 +16,7 @@ type Driver struct {
 	scope	 string
 	vtepdev  string
 	networks map[string]*NetworkState
+	docker   *dockerclient.DockerClient
 }
 
 // NetworkState is filled in at network creation time
@@ -32,10 +30,15 @@ type NetworkState struct {
 }
 
 func NewDriver(scope string, vtepdev string) (*Driver, error) {
+	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	if err != nil {
+		return nil, err
+	}
 	d := &Driver{
 		scope: scope,
 		vtepdev: vtepdev,
 		networks: make(map[string]*NetworkState),
+                docker: docker,
 	}
 	return d, nil
 }
@@ -54,8 +57,7 @@ type intNames struct {
 	BridgeName string
 }
 
-func getIntNames(netID string) (*intNames, error) {
-	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+func getIntNames(netID string, docker *dockerclient.DockerClient) (*intNames, error) {
 	net, err := docker.InspectNetwork(netID)
 	if err != nil {
 		return nil, err
@@ -84,8 +86,7 @@ func getIntNames(netID string) (*intNames, error) {
 	return names, nil
 }
 
-func getGateway(netID string) (string, error) {
-	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+func getGateway(netID string, docker dockerclient.DockerClient) (string, error) {
 	net, err := docker.InspectNetwork(netID)
         if err != nil {
                 return "", err
@@ -106,7 +107,7 @@ type intLinks struct {
 
 // this function gets netlink devices or creates them if they don't exist
 func (d *Driver) getLinks(netID string) (*intLinks, error) {
-	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	docker := d.docker
 	net, err := docker.InspectNetwork(netID)
 	if err != nil {
 		return nil, err
@@ -117,7 +118,7 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 		return nil, errors.New("Not a vxlan network")
 	}
 
-	names, err := getIntNames(netID)
+	names, err := getIntNames(netID, docker)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +402,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 }
 
 func (d *Driver) deleteNics(netID string) error {
-	names, err := getIntNames(netID)
+	names, err := getIntNames(netID, d.docker)
         if err != nil {
                 return err
         }
@@ -443,7 +444,7 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
 	netID := r.NetworkID
 
-	docker, _ := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	docker := d.docker
 	net, err := docker.InspectNetwork(netID)
 	if err != nil {
 		return err
@@ -493,7 +494,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	}
 
 	// SrcName gets renamed to DstPrefix + ID on the container iface
-        gateway, err := getGateway(netID)
+        gateway, err := getGateway(netID, *d.docker)
         if err != nil {
                 return nil, err
         }
