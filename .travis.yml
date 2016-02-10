@@ -8,10 +8,11 @@ go:
 services:
   - docker
 
-global:
-  - DOCKER_IMAGE_NAME=clinta/docker-vxlan-plugin
-  - GLIDE_VERSION=0.8.3
-  - GO15VENDOREXPERIMENT=1
+env:
+  global:
+    - DOCKER_IMAGE_NAME=clinta/docker-vxlan-plugin
+    - GLIDE_VERSION=0.8.3
+    - GO15VENDOREXPERIMENT=1
 
 before_install:
   - go get github.com/Masterminds/glide
