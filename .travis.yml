@@ -5,8 +5,12 @@ language: go
 services:
   - docker
 
+global:
+  - DOCKER_IMAGE_NAME=clinta/docker-vxlan-plugin
+  - GLIDE_VERSION=0.8.3
+  - GO15VENDOREXPERIMENT=1
+
 script:
-        
   - curl -Ls https://github.com/Masterminds/glide/releases/download/${GLIDE_VERSION}/glide-${GLIDE_VERSION}-linux-amd64.tar.gz | tar -xz --strip-components=1 -C /tmp
   - mv /tmp/glide /usr/local/bin/
   - rm -rf /tmp/*
@@ -16,11 +20,6 @@ script:
   - docker build -t $DOCKER_IMAGE_NAME .
   - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
   - if [ ! -z "$TRAVIS_TAG" ]; then docker tag $DOCKER_IMAGE_NAME:latest $DOCKER_IMAGE_NAME:$TRAVIS_TAG; fi && docker push $DOCKER_IMAGE_NAME
-
-env:  
-  - DOCKER_IMAGE_NAME=clinta/docker-vxlan-plugin
-  - GLIDE_VERSION=0.8.3
-  - GO15VENDOREXPERIMENT=1
 
 deploy:
   provider: releases
