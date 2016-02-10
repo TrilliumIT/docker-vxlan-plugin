@@ -19,7 +19,7 @@ before_install:
 
 install:
   - $GOPATH/bin/glide install
-  - go get -t ./...
+  - go get -t $($GOPATH/bin/glide novendor)
 
 script:
   - mv $GOPATH/bin/docker-vxlan-plugin ./
