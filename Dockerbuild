@@ -2,6 +2,13 @@ FROM golang:1.5.3-wheezy
 
 MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
 
+ENV GLIDE_VERSION 0.8.3
+ENV GO15VENDOREXPERIMENT=1
+
+RUN set -xe && \
+    curl -Ls https://github.com/Masterminds/glide/releases/download/${GLIDE_VERSION}/glide-${GLIDE_VERSION}-linux-amd64.tar.gz | tar -xz --strip-components=1 -C /tmp && \
+    mv /tmp/glide /usr/local/bin/ && \
+    rm -rf /tmp/*
 
 ENV SRC_ROOT /go/src/github.com/clinta/docker-vxlan-plugin 
 
@@ -12,4 +19,5 @@ WORKDIR ${SRC_ROOT}
 
 # Used to only go get if sources change.
 ADD . ${SRC_ROOT}/
-RUN go get .
+RUN glide install && \
+    go get .
