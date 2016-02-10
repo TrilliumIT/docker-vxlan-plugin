@@ -9,7 +9,7 @@ import (
 	"errors"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/clinta/go-plugins-helpers/network"
+	"github.com/docker/go-plugins-helpers/network"
 	"github.com/samalba/dockerclient"
 	"github.com/vishvananda/netlink"
 )

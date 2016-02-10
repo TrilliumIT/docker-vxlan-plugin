@@ -1,0 +1,29 @@
+hash: ede4e151ee014be6f842231e1fe9d33d44e5e98e8fb9ea6a4b76501ec3fc8981
+updated: 2016-02-10T08:26:59.650939428-05:00
+imports:
+- name: github.com/codegangsta/cli
+  version: 0ab42fd482c27cf2c95e7794ad3bb2082c2ab2d7
+- name: github.com/docker/go-connections
+  version: 3ef1e92d1b93e587895dfa466e1682ae63448801
+  subpackages:
+  - sockets
+- name: github.com/docker/go-plugins-helpers
+  version: e121e40d9473dd84b97bbccd835192dce7096f30
+  subpackages:
+  - network
+  - sdk
+- name: github.com/docker/go-units
+  version: 5d2041e26a699eaca682e2ea41c8f891e1060444
+- name: github.com/opencontainers/runc
+  version: bfd3345be900663fd0da2af5e916f0d78c58d475
+  subpackages:
+  - libcontainer/user
+- name: github.com/samalba/dockerclient
+  version: 4278ba330b9475a8fa85520226479697f6c84482
+- name: github.com/Sirupsen/logrus
+  version: be52937128b38f1d99787bb476c789e2af1147f1
+- name: github.com/vishvananda/netlink
+  version: 5a5eb317d73bc513ae0cfea7d9ac3c39f145e1db
+  subpackages:
+  - nl
+devImports: []

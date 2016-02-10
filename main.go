@@ -5,7 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/clinta/docker-vxlan-plugin/vxlan"
-	"github.com/clinta/go-plugins-helpers/network"
+	"github.com/docker/go-plugins-helpers/network"
 	"github.com/codegangsta/cli"
 )
 

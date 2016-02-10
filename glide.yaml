@@ -1,0 +1,10 @@
+package: github.com/clinta/docker-vxlan-plugin
+import:
+- package: github.com/Sirupsen/logrus
+- package: github.com/codegangsta/cli
+- package: github.com/docker/go-plugins-helpers
+  version: e121e40d9473dd84b97bbccd835192dce7096f30
+  subpackages:
+  - network
+- package: github.com/samalba/dockerclient
+- package: github.com/vishvananda/netlink
