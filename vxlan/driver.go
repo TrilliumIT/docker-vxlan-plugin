@@ -472,7 +472,8 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
         }
 	// create and attach local name to the bridge
 	veth := &netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5]},
+		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5],
+                MTU: links.Bridge.LinkAttrs.MTU },
 		PeerName:  "ethc" + r.EndpointID[:5],
 	}
 	if err := netlink.LinkAdd(veth); err != nil {

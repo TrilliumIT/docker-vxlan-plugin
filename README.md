@@ -52,7 +52,7 @@ Name of the bridge interface
 
 #### bridgeMTU
 
-MTU of the bridge interface
+MTU of the bridge interface. Container interfaces inherit their MTU from the bridge interface.
 
 #### bridgeHardwareAddr
 
