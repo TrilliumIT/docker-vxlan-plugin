@@ -19,5 +19,4 @@ WORKDIR ${SRC_ROOT}
 
 # Used to only go get if sources change.
 ADD . ${SRC_ROOT}/
-RUN glide install && \
-    go get .
+RUN go get -t $(glide novendor)

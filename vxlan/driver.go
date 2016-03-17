@@ -450,16 +450,16 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	if err != nil {
 		return err
 	}
-	VxlanIndex = links.Vxlan.LinkAttrs.Index
-	BridgeIndex = links.Bridge.LinkAttrs.Index
+	VxlanIndex := links.Vxlan.LinkAttrs.Index
+	BridgeIndex := links.Bridge.LinkAttrs.Index
 
 	allLinks, err := netlink.LinkList()
 	if err != nil {
 		return err
 	}
 
-	for link := range allLinks {
-		if link.LinkAttrs.Index != VxlanIndex && link.LinkAttrs.MasterIndex == BridgeIndex {
+	for i := range allLinks {
+		if allLinks[i].Attrs().Index != VxlanIndex && allLinks[i].Attrs().MasterIndex == BridgeIndex {
 			return nil
 		}
 	}
