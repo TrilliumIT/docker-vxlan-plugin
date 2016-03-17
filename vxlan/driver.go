@@ -446,17 +446,26 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
 	netID := r.NetworkID
 
-	docker := d.docker
-	net, err := docker.InspectNetwork(netID)
+	links, err := d.getLinks(netID)
+	if err != nil {
+		return err
+	}
+	VxlanIndex = links.Vxlan.LinkAttrs.Index
+	BridgeIndex = links.Bridge.LinkAttrs.Index
+
+	allLinks, err := netlink.LinkList()
 	if err != nil {
 		return err
 	}
 
-        if len(net.Containers) == 0 {
-                log.Debugf("No remaining containers, deleting vxlan and bridge interfaces.")
-                return d.deleteNics(netID)
-        }
-	return nil
+	for link := range allLinks {
+		if link.LinkAttrs.Index != VxlanIndex && link.LinkAttrs.MasterIndex == BridgeIndex {
+			return nil
+		}
+	}
+
+	log.Debugf("No interfaces attached to bridge: deleting vxlan and bridge interfaces.")
+	return d.deleteNics(netID)
 }
 
 func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, error) {
