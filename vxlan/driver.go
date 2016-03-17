@@ -413,6 +413,7 @@ func (d *Driver) deleteNics(netID string) error {
 		if err != nil {
 			return err
 		}
+                log.Debugf("Deleting interface %+v", names.VxlanName)
 	}
 	bridge, err := netlink.LinkByName(names.BridgeName)
 	if err == nil {
@@ -420,6 +421,7 @@ func (d *Driver) deleteNics(netID string) error {
 		if err != nil {
 			return err
 		}
+                log.Debugf("Deleting interface %+v", names.BridgeName)
 	}
 	return nil
 }
@@ -451,6 +453,7 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	}
 
         if len(net.Containers) == 0 {
+                log.Debugf("No remaining containers, deleting vxlan and bridge interfaces.")
                 return d.deleteNics(netID)
         }
 	return nil
