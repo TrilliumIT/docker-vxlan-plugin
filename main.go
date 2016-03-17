@@ -47,6 +47,12 @@ func Run(ctx *cli.Context) {
 	if ctx.Bool("debug") {
 		log.SetLevel(log.DebugLevel)
 	}
+	log.SetFormatter(&log.TextFormatter{
+		ForceColors: false,
+		DisableColors: true,
+		DisableTimestamp: false,
+		FullTimestamp: true,
+	})
 	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"))
 	if err != nil {
 		panic(err)
