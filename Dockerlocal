@@ -1,0 +1,8 @@
+FROM scratch
+ENV VER=v0.5.1
+
+MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
+
+ADD docker-vxlan-plugin docker-vxlan-plugin
+
+ENTRYPOINT ["/docker-vxlan-plugin"]
