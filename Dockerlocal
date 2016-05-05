@@ -1,8 +1,7 @@
-FROM scratch
-ENV VER=v0.5.1
+FROM debian:jessie
 
 MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
 
-ADD docker-vxlan-plugin docker-vxlan-plugin
+ADD docker-vxlan-plugin /docker-vxlan-plugin
 
 ENTRYPOINT ["/docker-vxlan-plugin"]
