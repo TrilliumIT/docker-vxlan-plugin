@@ -17,7 +17,7 @@ func main() {
 
 	var flagDebug = cli.BoolFlag{
 		Name:  "debug, d",
-		Usage: "enable debugging",
+		Usage: "Enable debugging.",
 	}
 	var flagScope = cli.StringFlag{
 		Name:  "scope",
@@ -29,6 +29,10 @@ func main() {
 		Value: "",
 		Usage: "VTEP device.",
 	}
+	var flagNoRemDev = cli.BoolFlag{
+		Name:  "noremdev",
+		Usage: "Don't remove the interfaces after the last container leaves",
+	}
 	app := cli.NewApp()
 	app.Name = "don"
 	app.Usage = "Docker vxLan Networking"
@@ -37,6 +41,7 @@ func main() {
 		flagDebug,
 		flagScope,
 		flagVtepDev,
+		flagNoRemDev,
 	}
 	app.Action = Run
 	app.Run(os.Args)
@@ -53,7 +58,7 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp: true,
 	})
-	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("noremdev"))
 	if err != nil {
 		panic(err)
 	}

@@ -1,10 +1,6 @@
-hash: b35c7a8b7e7809e606b02122652518287352e9b7dc09938ba9ad4930fcc86604
-updated: 2016-05-05T07:47:30.305775823-04:00
+hash: ab15e38bfc9c2cc6199c884deaa7862c2c9203d22739a1855cda8dd915dbd8ee
+updated: 2016-05-05T10:07:17.084151468-04:00
 imports:
-- name: github.com/clinta/docker-vxlan-plugin
-  version: e1e47fdc9160a21396c9078925cd0afe13ee62a6
-  subpackages:
-  - vxlan
 - name: github.com/codegangsta/cli
   version: 75b97d09d9f5792ff997e249a330a3ca28f8b537
 - name: github.com/coreos/go-systemd
