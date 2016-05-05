@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	version = "0.5.2"
+	version = "0.6"
 )
 
 func main() {
@@ -30,8 +30,8 @@ func main() {
 		Usage: "VTEP device.",
 	}
 	var flagNoRemDev = cli.BoolFlag{
-		Name:  "noremdev",
-		Usage: "Don't remove the interfaces after the last container leaves",
+		Name:  "allow_empty",
+		Usage: "Create interfaces before containers are creted, don't destroy interfaces after containers leave",
 	}
 	app := cli.NewApp()
 	app.Name = "don"

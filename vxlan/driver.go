@@ -15,7 +15,7 @@ type Driver struct {
 	network.Driver
 	scope	 string
 	vtepdev  string
-	noremdev bool
+	allow_empty bool
 	networks map[string]*NetworkState
 	docker	 *dockerclient.DockerClient
 }
@@ -30,7 +30,7 @@ type NetworkState struct {
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver(scope string, vtepdev string, noremdev bool) (*Driver, error) {
+func NewDriver(scope string, vtepdev string, allow_empty bool) (*Driver, error) {
 	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func NewDriver(scope string, vtepdev string, noremdev bool) (*Driver, error) {
 	d := &Driver{
 		scope: scope,
 		vtepdev: vtepdev,
-		noremdev: noremdev,
+		allow_empty: allow_empty,
 		networks: make(map[string]*NetworkState),
 		docker: docker,
 	}
@@ -446,7 +446,7 @@ func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
 
 func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
-	if d.noremdev {
+	if d.allow_empty {
 		return nil
 	}
 
