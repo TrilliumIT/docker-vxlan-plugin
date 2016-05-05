@@ -18,6 +18,7 @@ if [ "$(git describe --tags)" = "${LATEST_RELEASE}" ] ; then
 		echo "This is a release, all versions should match"
 		exit 1
 	fi
+	DKR_TAG="latest"
 else
 	if [ $(printf ${VERS} | uniq | wc -l) -eq 1 ] ; then
 		echo "Please increment the version in main.go"
@@ -27,9 +28,10 @@ else
 		echo "Please increment the version in main.go"
 		exit 1
 	fi
+	DKR_TAG="prerelease"
 fi
 
 
 docker build -f ./Dockerbuild -t clinta/docker-vxlan-plugin-build:v${MAIN_VER} . && docker run docker-vxlan-plugin-build:v${MAIN_VER} cat /go/bin/docker-vxlan-plugin > docker-vxlan-plugin
 chmod +x docker-vxlan-plugin
-docker build -f ./Dockerlocal -t clinta/docker-vxlan-plugin:v${MAIN_VER} .
+docker build -f ./Dockerlocal -t clinta/docker-vxlan-plugin:v${MAIN_VER} -t clinta/docker-vxlan-plugin:${DKR_TAG} .
