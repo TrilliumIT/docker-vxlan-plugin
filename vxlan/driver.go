@@ -43,10 +43,15 @@ func NewDriver(scope string, vtepdev string, allow_empty bool) (*Driver, error) 
 		docker: docker,
 	}
 	if d.allow_empty {
-		nets := d.docker.ListNetworks('type=custom')
+		nets, err := d.docker.ListNetworks("")
+		log.Debugf("Nets: %+v", nets)
+		if err != nil {
+			return d, err
+		}
 		for i := range nets {
 			if nets[i].Driver == "vxlan" {
-				_, err := d.getLinks(nets[i]['ID'])
+				log.Debugf("Net[i]: %+v", nets[i])
+				_, err := d.getLinks(nets[i].ID)
 				if err != nil {
 					return d, err
 				}

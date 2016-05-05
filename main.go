@@ -29,7 +29,7 @@ func main() {
 		Value: "",
 		Usage: "VTEP device.",
 	}
-	var flagNoRemDev = cli.BoolFlag{
+	var flagAllowEmpty = cli.BoolFlag{
 		Name:  "allow_empty",
 		Usage: "Create interfaces before containers are creted, don't destroy interfaces after containers leave",
 	}
@@ -41,7 +41,7 @@ func main() {
 		flagDebug,
 		flagScope,
 		flagVtepDev,
-		flagNoRemDev,
+		flagAllowEmpty,
 	}
 	app.Action = Run
 	app.Run(os.Args)
@@ -58,7 +58,7 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp: true,
 	})
-	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("noremdev"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow_empty"))
 	if err != nil {
 		panic(err)
 	}
