@@ -48,7 +48,7 @@ func main() {
 }
 
 // Run initializes the driver
-func Run(ctx *cli.Context) {
+func Run(ctx *cli.Context) error {
 	if ctx.Bool("debug") {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -60,8 +60,9 @@ func Run(ctx *cli.Context) {
 	})
 	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("noremdev"))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	h := network.NewHandler(d)
 	h.ServeUnix("root", "vxlan")
+	return nil
 }
