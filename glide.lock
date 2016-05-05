@@ -1,18 +1,18 @@
 hash: b35c7a8b7e7809e606b02122652518287352e9b7dc09938ba9ad4930fcc86604
-updated: 2016-03-17T09:47:51.843521612-04:00
+updated: 2016-05-05T07:47:30.305775823-04:00
 imports:
 - name: github.com/clinta/docker-vxlan-plugin
-  version: dc8931d778bac6b824e066a0c949be0ac3ed2715
+  version: e1e47fdc9160a21396c9078925cd0afe13ee62a6
   subpackages:
   - vxlan
 - name: github.com/codegangsta/cli
-  version: aca5b047ed14d17224157c3434ea93bf6cdaadee
+  version: 75b97d09d9f5792ff997e249a330a3ca28f8b537
 - name: github.com/coreos/go-systemd
   version: 7b2428fec40033549c68f54e26e89e7ca9a9ce31
   subpackages:
   - activation
 - name: github.com/docker/go-connections
-  version: f549a9393d05688dff0992ef3efd8bbe6c628aeb
+  version: 5b7154ba2efe13ff86ae8830a9e7cb120b080d6e
   subpackages:
   - sockets
 - name: github.com/docker/go-plugins-helpers
@@ -23,25 +23,25 @@ imports:
 - name: github.com/docker/go-units
   version: 5d2041e26a699eaca682e2ea41c8f891e1060444
 - name: github.com/Microsoft/go-winio
-  version: 8f9387ea7efabb228a981b9c381142be7667967f
+  version: 3b8b3c98b207f95fe0cd6c7c311a9ac497ba7c0f
 - name: github.com/opencontainers/runc
-  version: 015fad9fa88c8e214d4e2c0a7809bac18380ec7e
+  version: 89c3c97a8482f3a57cd4bb683df1a7b2c61405d8
   subpackages:
   - libcontainer/user
 - name: github.com/samalba/dockerclient
-  version: f274bbd0e2eb35ad1444dc6e6660214f9fbbc08c
+  version: 91d7393ff85980ba3a8966405871a3d446ca28f2
 - name: github.com/Sirupsen/logrus
   version: be52937128b38f1d99787bb476c789e2af1147f1
 - name: github.com/vishvananda/netlink
-  version: 4fdf23c882685717a2a750114bdc904afeafc16b
+  version: 7ec36826870685e65907935a6a8848f10a30eeaf
   subpackages:
   - nl
 - name: golang.org/x/net
-  version: 35b06af0720201bc2f326773a80767387544f8c4
+  version: 35ec611a141ee705590b9eb64d673f9e6dfeb1ac
   subpackages:
   - proxy
 - name: golang.org/x/sys
-  version: 9d4e42a20653790449273b3c85e67d6d8bae6e2e
+  version: b776ec39b3e54652e09028aaaaac9757f4f8211a
   subpackages:
   - unix
 devImports: []

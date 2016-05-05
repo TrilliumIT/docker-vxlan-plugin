@@ -1,7 +1,8 @@
-FROM ubuntu:14.04
+FROM scratch
+ENV VER=v0.5.1
 
 MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
 
-ADD docker-vxlan-plugin /
+ADD https://github.com/clinta/docker-vxlan-plugin/releases/download/${VER}/docker-vxlan-plugin docker-vxlan-plugin
 
 ENTRYPOINT ["/docker-vxlan-plugin"]
