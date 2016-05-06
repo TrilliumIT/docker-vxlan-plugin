@@ -442,6 +442,15 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
 
+	if d.allow_empty {
+		log.Debugf("Creating NICs")
+		_, err := d.getLinks(r.NetworkID)
+		if err != nil {
+			return err
+		}
+	}
+	return d, nil
+
 	// return nil and lazy create the network when a container joins it
 	return nil
 }
