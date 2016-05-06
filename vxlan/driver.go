@@ -192,9 +192,22 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 			Name: bridgeName,
 		},
 	}
-
 	// Parse interface options
 	for k, v := range net.Options {
+		if k == "bridgeMTU" {
+			mtu, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			bridge.LinkAttrs.MTU = mtu
+		}
+		if k == "bridgeHardwareAddr" {
+			hardwareAddr, err := gonet.ParseMAC(v)
+			if err != nil {
+				return nil, err
+			}
+			bridge.LinkAttrs.HardwareAddr = hardwareAddr
+		}
 		if k == "bridgeTxQLen" {
 			txQLen, err := strconv.Atoi(v)
 			if err != nil {
@@ -207,30 +220,6 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 	err := netlink.LinkAdd(bridge)
 	if err != nil {
 		return nil, err
-	}
-
-	// Parse interface options
-	for k, v := range net.Options {
-		if k == "bridgeMTU" {
-			mtu, err := strconv.Atoi(v)
-			if err != nil {
-				return nil, err
-			}
-			err = netlink.LinkSetMTU(bridge, mtu)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if k == "bridgeHardwareAddr" {
-			hardwareAddr, err := gonet.ParseMAC(v)
-			if err != nil {
-				return nil, err
-			}
-			err = netlink.LinkSetHardwareAddr(bridge, hardwareAddr)
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	err = netlink.LinkSetUp(bridge)
@@ -261,6 +250,20 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 
 	// Parse interface options
 	for k, v := range net.Options {
+		if k == "vxlanMTU" {
+			MTU, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.LinkAttrs.MTU = MTU
+		}
+		if k == "vxlanHardwareAddr" {
+			HardwareAddr, err := gonet.ParseMAC(v)
+			if err != nil {
+				return nil, err
+			}
+			vxlan.LinkAttrs.HardwareAddr = HardwareAddr
+		}
 		if k == "vxlanTxQLen" {
 			TxQLen, err := strconv.Atoi(v)
 			if err != nil {
@@ -402,30 +405,6 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 	err := netlink.LinkAdd(vxlan)
 	if err != nil {
 		return nil, err
-	}
-
-	// Parse interface options
-	for k, v := range net.Options {
-		if k == "vxlanMTU" {
-			mtu, err := strconv.Atoi(v)
-			if err != nil {
-				return nil, err
-			}
-			err = netlink.LinkSetMTU(vxlan, mtu)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if k == "vxlanHardwareAddr" {
-			hardwareAddr, err := gonet.ParseMAC(v)
-			if err != nil {
-				return nil, err
-			}
-			err = netlink.LinkSetHardwareAddr(vxlan, hardwareAddr)
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	// bring interfaces up
