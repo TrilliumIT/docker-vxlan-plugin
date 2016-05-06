@@ -7,7 +7,6 @@ import (
 	"github.com/clinta/docker-vxlan-plugin/vxlan"
 	"github.com/docker/go-plugins-helpers/network"
 	"github.com/codegangsta/cli"
-	"runtime/debug"
 )
 
 const (
@@ -66,7 +65,6 @@ func Run(ctx *cli.Context) {
 	})
 	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow_empty"), ctx.Bool("global_gateway"))
 	if err != nil {
-		debug.PrintStack()
 		panic(err)
 	}
 	h := network.NewHandler(d)
