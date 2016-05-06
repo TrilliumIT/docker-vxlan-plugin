@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"errors"
 	"strings"
+	"os/exec"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
@@ -14,12 +15,13 @@ import (
 
 type Driver struct {
 	network.Driver
-	scope	       string
-	vtepdev        string
-	allow_empty    bool
-	global_gateway bool
-	networks       map[string]*NetworkState
-	docker	       *dockerclient.DockerClient
+	scope	          string
+	vtepdev           string
+	allow_empty       bool
+	global_gateway    bool
+	block_gateway_arp bool
+	networks          map[string]*NetworkState
+	docker	          *dockerclient.DockerClient
 }
 
 // NetworkState is filled in at network creation time
@@ -32,7 +34,7 @@ type NetworkState struct {
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool) (*Driver, error) {
+func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool, block_gateway_arp bool) (*Driver, error) {
 	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
 	if err != nil {
 		return nil, err
@@ -452,6 +454,39 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 			if err != nil {
 				return nil, err
 			}
+		}
+	}
+
+	if d.block_gateway_arp {
+		gatewayIP := ""
+		for i := range net.IPAM.Config {
+			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
+			gatewayIP, err = netlink.ParseAddr(net.IPAM.Config[i].Gateway)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		cmd := exec.Command(	"arptables",
+					"--append", "FORWARD",
+					"--out-interface", vxlanName,
+					"--destination", gatewayIP,
+					"--opcode", "1"
+					"--jump", "DROP" )
+		err = cmd.Run()
+		if err != nil {
+			return nil, err
+		}
+
+		cmd := exec.Command(	"arptables",
+					"--append", "FORWARD",
+					"--in-interface", vxlanName,
+					"--source", gatewayIP,
+					"--opcode", "2"
+					"--jump", "DROP" )
+		err = cmd.Run()
+		if err != nil {
+			return nil, err
 		}
 	}
 

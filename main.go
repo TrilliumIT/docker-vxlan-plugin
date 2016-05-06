@@ -37,6 +37,10 @@ func main() {
 		Name:  "global_gateway",
 		Usage: "Assign the gateway address to the bridge interface, even on global networks",
 	}
+	var flagBlockGatewayArp = cli.BoolFlag{
+		Name:  "block_gateway_arp",
+		Usage: "Use arptables to block arp requests for the gateway from traversing the vxlan overlay. Necessary for enabling distributed routing.",
+	}
 	app := cli.NewApp()
 	app.Name = "don"
 	app.Usage = "Docker vxLan Networking"
@@ -47,6 +51,7 @@ func main() {
 		flagVtepDev,
 		flagAllowEmpty,
 		flagGlobalGateway,
+		flagBlockGatewayArp,
 	}
 	app.Action = Run
 	app.Run(os.Args)
@@ -63,7 +68,7 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp: true,
 	})
-	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow_empty"), ctx.Bool("global_gateway"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow_empty"), ctx.Bool("global_gateway"), ctx.Bool("block_gateway_arp"))
 	if err != nil {
 		panic(err)
 	}
