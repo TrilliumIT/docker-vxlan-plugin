@@ -13,11 +13,12 @@ import (
 
 type Driver struct {
 	network.Driver
-	scope	 string
-	vtepdev  string
-	allow_empty bool
-	networks map[string]*NetworkState
-	docker	 *dockerclient.DockerClient
+	scope	       string
+	vtepdev        string
+	allow_empty    bool
+	global_gateway bool
+	networks       map[string]*NetworkState
+	docker	       *dockerclient.DockerClient
 }
 
 // NetworkState is filled in at network creation time
@@ -30,7 +31,7 @@ type NetworkState struct {
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver(scope string, vtepdev string, allow_empty bool) (*Driver, error) {
+func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool) (*Driver, error) {
 	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
 	if err != nil {
 		return nil, err
@@ -39,6 +40,7 @@ func NewDriver(scope string, vtepdev string, allow_empty bool) (*Driver, error) 
 		scope: scope,
 		vtepdev: vtepdev,
 		allow_empty: allow_empty,
+		global_gateway: global_gateway,
 		networks: make(map[string]*NetworkState),
 		docker: docker,
 	}
@@ -224,9 +226,10 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 		return nil, err
 	}
 
-	if d.scope == "local" {
+	if d.scope == "local" || d.global_gateway {
 		for i := range net.IPAM.Config {
-			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway)
+			mask := strings.Split(mask := net.IPAM.Config[i].Subnet, "/")[1]
+			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway + "/" + mask)
 			if err != nil {
 				return nil, err
 			}

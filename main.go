@@ -33,6 +33,10 @@ func main() {
 		Name:  "allow_empty",
 		Usage: "Create interfaces before containers are creted, don't destroy interfaces after containers leave",
 	}
+	var flagGlobalGateway = cli.BoolFlag{
+		Name:  "global_gateway",
+		Usage: "Assign the gateway address to the bridge interface, even on global networks",
+	}
 	app := cli.NewApp()
 	app.Name = "don"
 	app.Usage = "Docker vxLan Networking"
@@ -42,6 +46,7 @@ func main() {
 		flagScope,
 		flagVtepDev,
 		flagAllowEmpty,
+		flagGlobalGateway,
 	}
 	app.Action = Run
 	app.Run(os.Args)
@@ -58,7 +63,7 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp: true,
 	})
-	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow_empty"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow_empty"), ctx.Bool("global_gateway"))
 	if err != nil {
 		panic(err)
 	}
