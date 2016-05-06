@@ -216,7 +216,7 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 			if err != nil {
 				return nil, err
 			}
-			err := netlink.LinkSetMTU(bridge, mtu)
+			err = netlink.LinkSetMTU(bridge, mtu)
 			if err != nil {
 				return nil, err
 			}
@@ -226,8 +226,10 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 			if err != nil {
 				return nil, err
 			}
-			err := netlink.LinkSetHardwareAddr(bridge, hardwareAddr)
+			log.Debugf("bridgeHardwareAddr: %+v", hardwareAddr)
+			err = netlink.LinkSetHardwareAddr(bridge, hardwareAddr)
 			if err != nil {
+				log.Debugf("error setting addr: %+v", err)
 				return nil, err
 			}
 		}
@@ -411,7 +413,7 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 			if err != nil {
 				return nil, err
 			}
-			err := netlink.LinkSetMTU(vxlan, mtu)
+			err = netlink.LinkSetMTU(vxlan, mtu)
 			if err != nil {
 				return nil, err
 			}
@@ -421,7 +423,7 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 			if err != nil {
 				return nil, err
 			}
-			err := netlink.LinkSetHardwareAddr(vxlan, hardwareAddr)
+			err = netlink.LinkSetHardwareAddr(vxlan, hardwareAddr)
 			if err != nil {
 				return nil, err
 			}
