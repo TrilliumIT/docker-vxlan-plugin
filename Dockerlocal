@@ -2,6 +2,11 @@ FROM debian:jessie
 
 MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
 
+RUN apt-get -qq update && \
+    apt-get -yqq install arptables && \
+    apt-get -qq clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 ADD docker-vxlan-plugin /docker-vxlan-plugin
 
 ENTRYPOINT ["/docker-vxlan-plugin"]

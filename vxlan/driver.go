@@ -222,6 +222,30 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 		return nil, err
 	}
 
+	// Parse interface options
+	for k, v := range net.Options {
+		if k == "bridgeHardwareAddr" {
+			hardwareAddr, err := gonet.ParseMAC(v)
+			if err != nil {
+				return nil, err
+			}
+			err = netlink.LinkSetHardwareAddr(bridge, hardwareAddr)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if k == "bridgeMTU" {
+			mtu, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			err = netlink.LinkSetMTU(bridge, mtu)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	err = netlink.LinkSetUp(bridge)
 	if err != nil {
 		return nil, err
@@ -405,6 +429,30 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 	err := netlink.LinkAdd(vxlan)
 	if err != nil {
 		return nil, err
+	}
+
+	// Parse interface options
+	for k, v := range net.Options {
+		if k == "vxlanHardwareAddr" {
+			hardwareAddr, err := gonet.ParseMAC(v)
+			if err != nil {
+				return nil, err
+			}
+			err = netlink.LinkSetHardwareAddr(vxlan, hardwareAddr)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if k == "vxlanMTU" {
+			mtu, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, err
+			}
+			err = netlink.LinkSetMTU(vxlan, mtu)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// bring interfaces up
