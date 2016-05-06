@@ -460,33 +460,34 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 	if d.block_gateway_arp {
 		gatewayIP := ""
 		for i := range net.IPAM.Config {
-			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
-			gatewayIP, err = netlink.ParseAddr(net.IPAM.Config[i].Gateway)
-			if err != nil {
-				return nil, err
+			if net.IPAM.Config[i].Gateway != "" {
+				gatewayIP = net.IPAM.Config[i].Gateway
 			}
 		}
 
-		cmd := exec.Command(	"arptables",
-					"--append", "FORWARD",
-					"--out-interface", vxlanName,
-					"--destination", gatewayIP,
-					"--opcode", "1"
-					"--jump", "DROP" )
-		err = cmd.Run()
-		if err != nil {
-			return nil, err
-		}
+		if gatewayIP != "" {
 
-		cmd := exec.Command(	"arptables",
-					"--append", "FORWARD",
-					"--in-interface", vxlanName,
-					"--source", gatewayIP,
-					"--opcode", "2"
-					"--jump", "DROP" )
-		err = cmd.Run()
-		if err != nil {
-			return nil, err
+			cmd := exec.Command(	"arptables",
+						"--append", "FORWARD",
+						"--out-interface", vxlanName,
+						"--destination", gatewayIP,
+						"--opcode", "1",
+						"--jump", "DROP" )
+			err = cmd.Run()
+			if err != nil {
+				return nil, err
+			}
+
+			cmd = exec.Command(	"arptables",
+						"--append", "FORWARD",
+						"--in-interface", vxlanName,
+						"--source", gatewayIP,
+						"--opcode", "2",
+						"--jump", "DROP" )
+			err = cmd.Run()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
