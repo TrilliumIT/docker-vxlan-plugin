@@ -44,6 +44,7 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bo
 		vtepdev: vtepdev,
 		allow_empty: allow_empty,
 		global_gateway: global_gateway,
+		block_gateway_arp: block_gateway_arp,
 		networks: make(map[string]*NetworkState),
 		docker: docker,
 	}
@@ -457,38 +458,39 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 		}
 	}
 
+	log.Debugf("checking block gateway arp enabled")
 	if d.block_gateway_arp {
-		gatewayIP := ""
+		log.Debugf("block gateway arp enabled")
 		for i := range net.IPAM.Config {
-			if net.IPAM.Config[i].Gateway != "" {
-				gatewayIP = net.IPAM.Config[i].Gateway
+			gatewayIP := net.IPAM.Config[i].Gateway
+			if gatewayIP != "" {
+
+				log.Debugf("Create arptables rules to drop: %+v", gatewayIP)
+
+				cmd := exec.Command(	"arptables",
+							"--append", "FORWARD",
+							"--out-interface", vxlanName,
+							"--destination-ip", gatewayIP,
+							"--opcode", "1",
+							"--jump", "DROP" )
+				err = cmd.Run()
+				if err != nil {
+					return nil, err
+				}
+
+				cmd = exec.Command(	"arptables",
+							"--append", "FORWARD",
+							"--in-interface", vxlanName,
+							"--source-ip", gatewayIP,
+							"--opcode", "2",
+							"--jump", "DROP" )
+				err = cmd.Run()
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 
-		if gatewayIP != "" {
-
-			cmd := exec.Command(	"arptables",
-						"--append", "FORWARD",
-						"--out-interface", vxlanName,
-						"--destination", gatewayIP,
-						"--opcode", "1",
-						"--jump", "DROP" )
-			err = cmd.Run()
-			if err != nil {
-				return nil, err
-			}
-
-			cmd = exec.Command(	"arptables",
-						"--append", "FORWARD",
-						"--in-interface", vxlanName,
-						"--source", gatewayIP,
-						"--opcode", "2",
-						"--jump", "DROP" )
-			err = cmd.Run()
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	// bring interfaces up

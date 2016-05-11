@@ -30,15 +30,15 @@ func main() {
 		Usage: "VTEP device.",
 	}
 	var flagAllowEmpty = cli.BoolFlag{
-		Name:  "allow_empty",
+		Name:  "allow-empty",
 		Usage: "Create interfaces before containers are creted, don't destroy interfaces after containers leave",
 	}
 	var flagGlobalGateway = cli.BoolFlag{
-		Name:  "global_gateway",
+		Name:  "global-gateway",
 		Usage: "Assign the gateway address to the bridge interface, even on global networks",
 	}
 	var flagBlockGatewayArp = cli.BoolFlag{
-		Name:  "block_gateway_arp",
+		Name:  "block-gateway-arp",
 		Usage: "Use arptables to block arp requests for the gateway from traversing the vxlan overlay. Necessary for enabling distributed routing.",
 	}
 	app := cli.NewApp()
@@ -68,7 +68,7 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp: true,
 	})
-	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow_empty"), ctx.Bool("global_gateway"), ctx.Bool("block_gateway_arp"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow-empty"), ctx.Bool("global-gateway"), ctx.Bool("block-gateway-arp"))
 	if err != nil {
 		panic(err)
 	}
