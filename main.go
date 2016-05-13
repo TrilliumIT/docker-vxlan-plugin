@@ -35,11 +35,11 @@ func main() {
 	}
 	var flagGlobalGateway = cli.BoolFlag{
 		Name:  "global-gateway",
-		Usage: "Assign the gateway address to the bridge interface, even on global networks",
+		Usage: "Allow Assigning the gateway address to the bridge interface, even on global networks. The globalGateway option must also be specified in the network options for any networks you want global-gateway to be active on.",
 	}
 	var flagBlockGatewayArp = cli.BoolFlag{
 		Name:  "block-gateway-arp",
-		Usage: "Use arptables to block arp requests for the gateway from traversing the vxlan overlay. Necessary for enabling distributed routing.",
+		Usage: "Use arptables to block arp requests for the gateway from traversing the vxlan overlay. Necessary for enabling distributed routing The blockGatewayArp option must also be specified in the network options for any networks you want to block arps on.",
 	}
 	app := cli.NewApp()
 	app.Name = "don"

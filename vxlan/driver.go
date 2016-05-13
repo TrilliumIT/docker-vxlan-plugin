@@ -225,6 +225,8 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 		return nil, err
 	}
 
+	globalGateway := false
+
 	// Parse interface options
 	for k, v := range net.Options {
 		if k == "bridgeHardwareAddr" {
@@ -247,6 +249,12 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 				return nil, err
 			}
 		}
+		if k == "globalGateway" {
+			globalGateway, err = strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	err = netlink.LinkSetUp(bridge)
@@ -254,7 +262,7 @@ func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResour
 		return nil, err
 	}
 
-	if d.scope == "local" || d.global_gateway {
+	if d.scope == "local" || ( d.global_gateway && globalGateway ){
 		for i := range net.IPAM.Config {
 			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
 			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway + "/" + mask)
@@ -434,6 +442,8 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 		return nil, err
 	}
 
+	blockGatewayArp := false
+
 	// Parse interface options
 	for k, v := range net.Options {
 		if k == "vxlanHardwareAddr" {
@@ -456,10 +466,16 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 				return nil, err
 			}
 		}
+		if k == "blockGatewayArp" {
+			blockGatewayArp, err = strconv.ParseBool(v)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	log.Debugf("checking block gateway arp enabled")
-	if d.block_gateway_arp {
+	if ( d.block_gateway_arp && blockGatewayArp ) {
 		log.Debugf("block gateway arp enabled")
 		for i := range net.IPAM.Config {
 			gatewayIP := net.IPAM.Config[i].Gateway
