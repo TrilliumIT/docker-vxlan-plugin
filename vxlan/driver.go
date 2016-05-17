@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"os/exec"
+	"fmt"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
@@ -35,13 +36,14 @@ type NetworkState struct {
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool, block_gateway_arp bool) (*Driver, error) {
+func NewDriver(scope string, mode string, vtepdev string, allow_empty bool, global_gateway bool, block_gateway_arp bool) (*Driver, error) {
 	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
 	if err != nil {
 		return nil, err
 	}
 	d := &Driver{
 		scope: scope,
+		mode: mode,
 		vtepdev: vtepdev,
 		allow_empty: allow_empty,
 		global_gateway: global_gateway,
@@ -148,6 +150,23 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 		return nil, err
 	}
 
+	var vxlan *netlink.Vxlan
+	vxlanlink, err := netlink.LinkByName(names.VxlanName)
+	if err == nil {
+		vxlan = &netlink.Vxlan{
+			LinkAttrs: *vxlanlink.Attrs(),
+		}
+	} else {
+		vxlan, err = d.createVxLan(names.VxlanName, net)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	links := &intLinks{
+		Vxlan: vxlan,
+	}
+
 	// get or create links
 	if d.mode == "bridge" {
 		var bridge *netlink.Bridge
@@ -162,33 +181,16 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 				return nil, err
 			}
 		}
+		// add vxlan to bridge
+		if vxlan.LinkAttrs.MasterIndex == 0 {
+			err = netlink.LinkSetMaster(vxlan, bridge)
+			if err != nil {
+				return nil, err
+			}
+		}
+		links.Bridge = bridge
 	}
 
-	var vxlan *netlink.Vxlan
-	vxlanlink, err := netlink.LinkByName(names.VxlanName)
-	if err == nil {
-		vxlan = &netlink.Vxlan{
-			LinkAttrs: *vxlanlink.Attrs(),
-		}
-	} else {
-		vxlan, err = d.createVxLan(names.VxlanName, net)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// add vxlan to bridge
-	if vxlan.LinkAttrs.MasterIndex == 0 {
-		err = netlink.LinkSetMaster(vxlan, bridge)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	links := &intLinks{
-		Vxlan: vxlan,
-		Bridge: bridge,
-	}
 
 	return links, nil
 }
@@ -589,10 +591,9 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	}
 	VxlanIndex := links.Vxlan.LinkAttrs.Index
 
+	BridgeIndex := VxlanIndex
 	if d.mode == "bridge" {
-		BridgeIndex := links.Bridge.LinkAttrs.Index
-	} else {
-		BridgeIndex := VxlanIndex
+		BridgeIndex = links.Bridge.LinkAttrs.Index
 	}
 
 	allLinks, err := netlink.LinkList()
@@ -620,8 +621,6 @@ func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, er
 func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	if d.mode == "macvlan" {
 		return d.joinMacVlan(r)
-	} else if d.mode == "ipvlan" {
-		return d.joinIpVlan(r)
 	} else {
 		return d.joinBridge(r)
 	}
@@ -639,7 +638,7 @@ func (d *Driver) joinMacVlan(r *network.JoinRequest) (*network.JoinResponse, err
 	macvlan := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:        "macvlan_" + r.EndpointID[:5],
-			ParentIndex: links.VxLan.LinkAttrs.Index,
+			ParentIndex: links.Vxlan.LinkAttrs.Index,
 		},
 		Mode: netlink.MACVLAN_MODE_BRIDGE,
 	}
@@ -653,7 +652,7 @@ func (d *Driver) joinMacVlan(r *network.JoinRequest) (*network.JoinResponse, err
 	}
 	res := &network.JoinResponse{
 		InterfaceName: network.InterfaceName{
-			SrcName:   macvlan_ + r.EndpointID[:5],
+			SrcName:   "macvlan_" + r.EndpointID[:5],
 			DstPrefix: "eth",
 		},
 		Gateway: gateway,
@@ -712,8 +711,6 @@ func (d *Driver) joinBridge(r *network.JoinRequest) (*network.JoinResponse, erro
 func (d *Driver) Leave(r *network.LeaveRequest) error {
 	if d.mode == "macvlan" {
 		return d.leaveMacVlan(r)
-	} else if d.mode == "ipvlan" {
-		return d.leaveIpVlan(r)
 	} else {
 		return d.leaveBridge(r)
 	}
@@ -721,7 +718,8 @@ func (d *Driver) Leave(r *network.LeaveRequest) error {
 
 func (d *Driver) leaveMacVlan(r *network.LeaveRequest) error {
 
-	vlanLink, err := netlink.LinkByName("macvlan_" + r.EndpointID[:5])
+	linkName := "macvlan_" + r.EndpointID[:5]
+	vlanLink, err := netlink.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
 	}
