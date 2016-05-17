@@ -16,6 +16,7 @@ import (
 type Driver struct {
 	network.Driver
 	scope	          string
+	mode	          string
 	vtepdev           string
 	allow_empty       bool
 	global_gateway    bool
@@ -148,18 +149,21 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 	}
 
 	// get or create links
-	var bridge *netlink.Bridge
-	bridgelink, err := netlink.LinkByName(names.BridgeName)
-	if err == nil {
-		bridge = &netlink.Bridge{
-			LinkAttrs: *bridgelink.Attrs(),
-		}
-	} else {
-		bridge, err = d.createBridge(names.BridgeName, net)
-		if err != nil {
-			return nil, err
+	if d.mode == "bridge" {
+		var bridge *netlink.Bridge
+		bridgelink, err := netlink.LinkByName(names.BridgeName)
+		if err == nil {
+			bridge = &netlink.Bridge{
+				LinkAttrs: *bridgelink.Attrs(),
+			}
+		} else {
+			bridge, err = d.createBridge(names.BridgeName, net)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+
 	var vxlan *netlink.Vxlan
 	vxlanlink, err := netlink.LinkByName(names.VxlanName)
 	if err == nil {
@@ -540,14 +544,18 @@ func (d *Driver) deleteNics(netID string) error {
 		}
 		log.Debugf("Deleting interface %+v", names.VxlanName)
 	}
-	bridge, err := netlink.LinkByName(names.BridgeName)
-	if err == nil {
-		err := netlink.LinkDel(bridge)
-		if err != nil {
-			return err
+	
+	if d.mode == "bridge" {
+		bridge, err := netlink.LinkByName(names.BridgeName)
+		if err == nil {
+			err := netlink.LinkDel(bridge)
+			if err != nil {
+				return err
+			}
+			log.Debugf("Deleting interface %+v", names.BridgeName)
 		}
-		log.Debugf("Deleting interface %+v", names.BridgeName)
 	}
+
 	return nil
 }
 
@@ -580,7 +588,12 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 		return err
 	}
 	VxlanIndex := links.Vxlan.LinkAttrs.Index
-	BridgeIndex := links.Bridge.LinkAttrs.Index
+
+	if d.mode == "bridge" {
+		BridgeIndex := links.Bridge.LinkAttrs.Index
+	} else {
+		BridgeIndex := VxlanIndex
+	}
 
 	allLinks, err := netlink.LinkList()
 	if err != nil {
@@ -605,6 +618,51 @@ func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, er
 }
 
 func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
+	if d.mode == "macvlan" {
+		return d.joinMacVlan(r)
+	} else if d.mode == "ipvlan" {
+		return d.joinIpVlan(r)
+	} else {
+		return d.joinBridge(r)
+	}
+}
+
+func (d *Driver) joinMacVlan(r *network.JoinRequest) (*network.JoinResponse, error) {
+	netID := r.NetworkID
+	// get the links
+	links, err := d.getLinks(netID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a macvlan link
+	macvlan := &netlink.Macvlan{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:        "macvlan_" + r.EndpointID[:5],
+			ParentIndex: links.VxLan.LinkAttrs.Index,
+		},
+		Mode: netlink.MACVLAN_MODE_BRIDGE,
+	}
+	if err := netlink.LinkAdd(macvlan); err != nil {
+		return nil, err
+	}
+
+	gateway, err := getGateway(netID, *d.docker)
+	if err != nil {
+		return nil, err
+	}
+	res := &network.JoinResponse{
+		InterfaceName: network.InterfaceName{
+			SrcName:   macvlan_ + r.EndpointID[:5],
+			DstPrefix: "eth",
+		},
+		Gateway: gateway,
+	}
+	log.Debugf("Join endpoint %s:%s to %s", r.NetworkID, r.EndpointID, r.SandboxKey)
+	return res, nil
+}
+
+func (d *Driver) joinBridge(r *network.JoinRequest) (*network.JoinResponse, error) {
 	netID := r.NetworkID
 	// get the links
 	links, err := d.getLinks(netID)
@@ -652,6 +710,36 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 }
 
 func (d *Driver) Leave(r *network.LeaveRequest) error {
+	if d.mode == "macvlan" {
+		return d.leaveMacVlan(r)
+	} else if d.mode == "ipvlan" {
+		return d.leaveIpVlan(r)
+	} else {
+		return d.leaveBridge(r)
+	}
+}
+
+func (d *Driver) leaveMacVlan(r *network.LeaveRequest) error {
+
+	vlanLink, err := netlink.LinkByName("macvlan_" + r.EndpointID[:5])
+	if err != nil {
+		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
+	}
+	// verify a parent interface isn't being deleted
+	if vlanLink.Attrs().ParentIndex == 0 {
+		return fmt.Errorf("interface %s does not appear to be a slave device: %v", linkName, err)
+	}
+	// delete the macvlan slave device
+	if err := netlink.LinkDel(vlanLink); err != nil {
+		return fmt.Errorf("failed to delete  %s link: %v", linkName, err)
+	}
+
+	log.Debugf("Deleted subinterface: %s", linkName)
+	return nil
+
+}
+
+func (d *Driver) leaveBridge(r *network.LeaveRequest) error {
 	log.Debugf("Leave request: %+v", r)
 
 	veth := &netlink.Veth{
