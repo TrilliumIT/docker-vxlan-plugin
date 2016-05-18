@@ -7,6 +7,7 @@ import (
 	"strings"
 	"os/exec"
 	"fmt"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
@@ -49,22 +50,31 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bo
 		docker: docker,
 	}
 	if d.allow_empty {
+		go d.watchNetworks()
+	}
+	return d, nil
+}
+
+// Loop to watch for new networks created and create interfaces when needed
+func (d *Driver) watchNetworks() error {
+	for {
 		nets, err := d.docker.ListNetworks("")
 		log.Debugf("Nets: %+v", nets)
 		if err != nil {
-			return d, err
+			return err
 		}
 		for i := range nets {
 			if nets[i].Driver == "vxlan" {
 				log.Debugf("Net[i]: %+v", nets[i])
 				_, err := d.getLinks(nets[i].ID)
 				if err != nil {
-					return d, err
+					return err
 				}
 			}
 		}
+		time.Sleep(1 * time.Second)
 	}
-	return d, nil
+	return nil
 }
 
 func (d *Driver) GetCapabilities() (*network.CapabilitiesResponse, error) {
