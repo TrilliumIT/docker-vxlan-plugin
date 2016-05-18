@@ -8,11 +8,15 @@ import (
 	"os/exec"
 	"fmt"
 	"time"
+	"os"
+	"os/signal"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
 	"github.com/samalba/dockerclient"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 type Driver struct {
@@ -22,17 +26,8 @@ type Driver struct {
 	allow_empty       bool
 	global_gateway    bool
 	block_gateway_arp bool
-	networks          map[string]*NetworkState
+	networks          map[string]bool
 	docker	          *dockerclient.DockerClient
-}
-
-// NetworkState is filled in at network creation time
-// it contains state that we wish to keep for each network
-type NetworkState struct {
-	VXLan	 *netlink.Vxlan
-	Gateway  string
-	IPv4Data []*network.IPAMData
-	IPv6Data []*network.IPAMData
 }
 
 func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool, block_gateway_arp bool) (*Driver, error) {
@@ -46,11 +41,14 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bo
 		allow_empty: allow_empty,
 		global_gateway: global_gateway,
 		block_gateway_arp: block_gateway_arp,
-		networks: make(map[string]*NetworkState),
+		networks: make(map[string]bool),
 		docker: docker,
 	}
 	if d.allow_empty {
 		go d.watchNetworks()
+	}
+	if d.global_gateway {
+		go watchEvents()
 	}
 	return d, nil
 }
@@ -59,12 +57,11 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bo
 func (d *Driver) watchNetworks() error {
 	for {
 		nets, err := d.docker.ListNetworks("")
-		log.Debugf("Nets: %+v", nets)
 		if err != nil {
 			return err
 		}
 		for i := range nets {
-			if nets[i].Driver == "vxlan" {
+			if nets[i].Driver == "vxlan" && !d.networks[nets[i].ID] {
 				log.Debugf("Net[i]: %+v", nets[i])
 				_, err := d.getLinks(nets[i].ID)
 				if err != nil {
@@ -72,9 +69,36 @@ func (d *Driver) watchNetworks() error {
 				}
 			}
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 	return nil
+}
+
+func eventCallback(e *dockerclient.Event, ec chan error, args ...interface{}) {
+	if e.Type == "network" && e.Action == "connect" && e.Actor.Attributes["type"] == "vxlan" {
+		log.Printf("Status: %+v", e.Status)
+		log.Printf("ID: %+v", e.ID)
+		log.Printf("From: %+v", e.From)
+		log.Printf("Type: %+v", e.Type)
+		log.Printf("Action: %+v", e.Action)
+		log.Printf("Actor ID: %+v", e.Actor.ID)
+		log.Printf("Actor Attributes: %+v", e.Actor.Attributes)
+		log.Printf("Driver: %+v", e.Actor.Attributes["type"])
+		log.Printf("Container ID: %+v", e.Actor.Attributes["container"])
+	}
+}
+
+func waitForInterrupt() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	for _ = range sigChan {
+		client.StopAllMonitorEvents()
+	}
+}
+
+func (d *Driver) watchEvents() error {
+	d.docker.StartMonitorEvents(eventCallBack, nil)
+	waitForInterrupt()
 }
 
 func (d *Driver) GetCapabilities() (*network.CapabilitiesResponse, error) {
@@ -169,6 +193,7 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 		Vxlan: vxlan,
 	}
 
+	d.networks[netID] = true
 	return links, nil
 }
 
@@ -418,7 +443,9 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 		return nil, err
 	}
 
+	log.Debugf("checking if gateway enabled")
 	if d.scope == "local" || ( d.global_gateway && globalGateway ){
+		log.Debugf("gateway is enabled")
 		for i := range net.IPAM.Config {
 			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
 			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway + "/" + mask)
