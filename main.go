@@ -24,11 +24,6 @@ func main() {
 		Value: "local",
 		Usage: "Scope of the network. local or global.",
 	}
-	var flagMode = cli.StringFlag{
-		Name:  "mode",
-		Value: "bridge",
-		Usage: "Device mode. bridge, macvlan or ipvlan. Default bridge.",
-	}
 	var flagVtepDev = cli.StringFlag{
 		Name:  "vtepdev",
 		Value: "",
@@ -53,7 +48,6 @@ func main() {
 	app.Flags = []cli.Flag{
 		flagDebug,
 		flagScope,
-		flagMode,
 		flagVtepDev,
 		flagAllowEmpty,
 		flagGlobalGateway,
@@ -74,7 +68,7 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp: true,
 	})
-	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("mode"), ctx.String("vtepdev"), ctx.Bool("allow-empty"), ctx.Bool("global-gateway"), ctx.Bool("block-gateway-arp"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow-empty"), ctx.Bool("global-gateway"), ctx.Bool("block-gateway-arp"))
 	if err != nil {
 		panic(err)
 	}
