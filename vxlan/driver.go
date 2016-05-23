@@ -16,7 +16,7 @@ import (
 	"github.com/docker/go-plugins-helpers/network"
 	"github.com/samalba/dockerclient"
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
+	//"github.com/vishvananda/netns"
 )
 
 type Driver struct {
@@ -48,7 +48,7 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bo
 		go d.watchNetworks()
 	}
 	if d.global_gateway {
-		go watchEvents()
+		go d.watchEvents()
 	}
 	return d, nil
 }
@@ -74,31 +74,40 @@ func (d *Driver) watchNetworks() error {
 	return nil
 }
 
-func eventCallback(e *dockerclient.Event, ec chan error, args ...interface{}) {
-	if e.Type == "network" && e.Action == "connect" && e.Actor.Attributes["type"] == "vxlan" {
-		log.Printf("Status: %+v", e.Status)
-		log.Printf("ID: %+v", e.ID)
-		log.Printf("From: %+v", e.From)
-		log.Printf("Type: %+v", e.Type)
-		log.Printf("Action: %+v", e.Action)
-		log.Printf("Actor ID: %+v", e.Actor.ID)
-		log.Printf("Actor Attributes: %+v", e.Actor.Attributes)
-		log.Printf("Driver: %+v", e.Actor.Attributes["type"])
-		log.Printf("Container ID: %+v", e.Actor.Attributes["container"])
-	}
-}
 
-func waitForInterrupt() {
+func (d *Driver) waitForInterrupt() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	for _ = range sigChan {
-		client.StopAllMonitorEvents()
+		d.docker.StopAllMonitorEvents()
 	}
 }
 
-func (d *Driver) watchEvents() error {
-	d.docker.StartMonitorEvents(eventCallBack, nil)
-	waitForInterrupt()
+func (d *Driver) eventCallBack(e *dockerclient.Event, ec chan error, args ...interface{}) error {
+	if d.global_gateway && e.Type == "network" && e.Action == "connect" && e.Actor.Attributes["type"] == "vxlan" {
+		log.Debugf("Adding gateway to arp table in container %+v", e.Actor.Attributes["container"][:5])
+
+		ns, err := netns.GetFromDocker(e.Actor.Attributes["container"])
+		if err != nil {
+			return err
+		}
+
+		h, err := netlink.NewHandleAt(ns)
+		if err != nil {
+			return err
+		}
+
+		n := &netlink.Neigh{
+			IP:	net.ParseIP("10.1.128.254"),
+			HardwareAddr:	parseMAC("72:0a:11:91:9d:f4"),
+			State: netlink.NUD_PERMANENT,
+		}
+	}
+}
+
+func (d *Driver) watchEvents() {
+	d.docker.StartMonitorEvents(d.eventCallBack, nil)
+	d.waitForInterrupt()
 }
 
 func (d *Driver) GetCapabilities() (*network.CapabilitiesResponse, error) {
@@ -548,7 +557,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	// Create a macvlan link
 	macvlan := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:        "macvlan_" + r.EndpointID[:5],
+			Name:        "vxlan_" + r.EndpointID[:12],
 			ParentIndex: links.Vxlan.LinkAttrs.Index,
 		},
 		Mode: netlink.MACVLAN_MODE_BRIDGE,
@@ -563,7 +572,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	}
 	res := &network.JoinResponse{
 		InterfaceName: network.InterfaceName{
-			SrcName:   "macvlan_" + r.EndpointID[:5],
+			SrcName:   "vxlan_" + r.EndpointID[:12],
 			DstPrefix: "eth",
 		},
 		Gateway: gateway,
@@ -573,8 +582,12 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 }
 
 func (d *Driver) Leave(r *network.LeaveRequest) error {
+	names, err := getIntNames(netID, docker)
+	if err != nil {
+		return nil, err
+	}
 
-	linkName := "macvlan_" + r.EndpointID[:5]
+	linkName := "vxlan_" + r.EndpointID[:12] + "@" + names.VxlanName
 	vlanLink, err := netlink.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
