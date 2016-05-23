@@ -68,6 +68,11 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp: true,
 	})
+
+	if ctx.Bool("local-gateway") && ctx.Bool("global-gateway") {
+		panic("local-gateway and global-gateway cannot both be enabled on the same host")
+	}
+
 	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("allow-empty"), ctx.Bool("local-gateway"), ctx.Bool("global-gateway"))
 	if err != nil {
 		panic(err)

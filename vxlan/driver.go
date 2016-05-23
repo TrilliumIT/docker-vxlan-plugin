@@ -39,15 +39,15 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, local_gateway boo
 		scope: scope,
 		vtepdev: vtepdev,
 		allow_empty: allow_empty,
+		local_gateway: local_gateway,
 		global_gateway: global_gateway,
-		block_gateway_arp: block_gateway_arp,
 		networks: make(map[string]bool),
 		docker: docker,
 	}
 	if d.allow_empty {
 		go d.watchNetworks()
 	}
-	if d.global_gateway {
+	if d.local_gateway {
 		go d.watchEvents()
 	}
 	return d, nil
@@ -98,12 +98,14 @@ func (d *Driver) waitForInterrupt() {
 }
 
 func (d *Driver) eventCallBack(e *dockerclient.Event, ec chan error, args ...interface{}) error {
-	if d.global_gateway && e.Type == "network" && e.Action == "connect" && e.Actor.Attributes["type"] == "vxlan" {
+	if d.local_gateway && e.Type == "network" && e.Action == "connect" && e.Actor.Attributes["type"] == "vxlan" {
 		log.Debugf("Adding gateway to arp table in container %+v", e.Actor.Attributes["container"][:5])
 
-		ns, err := netns.GetFromDocker(e.Actor.Attributes["container"])
-		if err != nil {
-			return err
+		// keep trying until the container namespace has been created
+		ns, _ := netns.GetFromDocker(e.Actor.Attributes["container"])
+		for ns == -1 {
+			time.Sleep(10 * time.Millisecond)
+			ns, _ = netns.GetFromDocker(e.Actor.Attributes["container"])
 		}
 
 		h, err := netlink.NewHandleAt(ns)
@@ -111,10 +113,28 @@ func (d *Driver) eventCallBack(e *dockerclient.Event, ec chan error, args ...int
 			return err
 		}
 
-		n := &netlink.Neigh{
-			IP:	net.ParseIP("10.1.128.254"),
-			HardwareAddr:	parseMAC("72:0a:11:91:9d:f4"),
-			State: netlink.NUD_PERMANENT,
+		// wait until the namespace has a default route, then add the arp entry
+		Loop:
+		for {
+			routes, _ := h.RouteList(nil, netlink.FAMILY_V4)
+			for i := range routes {
+				if routes[i].Dst == nil  {
+					// FIXME: Get the mac address from the gateway macvlan interface, and the IP from the gateway.
+					n := &netlink.Neigh{
+						IP:	net.ParseIP("10.1.128.254"),
+						HardwareAddr:	parseMAC("72:0a:11:91:9d:f4"),
+						State: netlink.NUD_PERMANENT,
+					}
+
+					// add the arp entry
+					err := h.NeighSet(n)
+					if err != nil {
+						panic(err)
+					}
+					break Loop
+				}
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 }
@@ -386,8 +406,7 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 		return nil, err
 	}
 
-	blockGatewayArp := false
-	globalGateway := false
+	localGateway := false
 
 	// Parse interface options
 	for k, v := range net.Options {
@@ -411,53 +430,12 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 				return nil, err
 			}
 		}
-		if k == "blockGatewayArp" {
-			blockGatewayArp, err = strconv.ParseBool(v)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if k == "globalGateway" {
+		if k == "localGateway" {
 			globalGateway, err = strconv.ParseBool(v)
 			if err != nil {
 				return nil, err
 			}
 		}
-	}
-
-	log.Debugf("checking block gateway arp enabled")
-	if ( d.block_gateway_arp && blockGatewayArp ) {
-		log.Debugf("block gateway arp enabled")
-		for i := range net.IPAM.Config {
-			gatewayIP := net.IPAM.Config[i].Gateway
-			if gatewayIP != "" {
-
-				log.Debugf("Create arptables rules to drop: %+v", gatewayIP)
-
-				cmd := exec.Command(	"arptables",
-							"--append", "FORWARD",
-							"--out-interface", vxlanName,
-							"--destination-ip", gatewayIP,
-							"--opcode", "1",
-							"--jump", "DROP" )
-				err = cmd.Run()
-				if err != nil {
-					return nil, err
-				}
-
-				cmd = exec.Command(	"arptables",
-							"--append", "FORWARD",
-							"--in-interface", vxlanName,
-							"--source-ip", gatewayIP,
-							"--opcode", "2",
-							"--jump", "DROP" )
-				err = cmd.Run()
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-
 	}
 
 	// bring interfaces up
@@ -467,7 +445,11 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 	}
 
 	log.Debugf("checking if gateway enabled")
-	if d.scope == "local" || ( d.global_gateway && globalGateway ){
+	if d.scope == "local" || ( d.local_gateway && localGateway ) || d.globalGateway {
+		// FIXME: Make the gateway namespace if it doesn't exist
+		// FIXME: create the p2p link if it doesn't exist and add it to the gateway namespace
+		// FIXME: make macvlan interface for gateway
+		// FIXME: add it to the gateway namespace
 		log.Debugf("gateway is enabled")
 		for i := range net.IPAM.Config {
 			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
@@ -475,7 +457,11 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 			if err != nil {
 				return nil, err
 			}
+			// FIXME: if local_gateway:
+				// FIXME: sysctl arp_ignore - 8
+			// FIXME: add the ip to the macvlan interface
 			netlink.AddrAdd(vxlan, gatewayIP)
+			// FIXME: Add a route to the network via the p2p link
 		}
 	}
 
