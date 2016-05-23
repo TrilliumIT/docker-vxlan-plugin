@@ -24,13 +24,13 @@ type Driver struct {
 	scope	          string
 	vtepdev           string
 	allow_empty       bool
+	local_gateway     bool
 	global_gateway    bool
-	block_gateway_arp bool
 	networks          map[string]bool
 	docker	          *dockerclient.DockerClient
 }
 
-func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool, block_gateway_arp bool) (*Driver, error) {
+func NewDriver(scope string, vtepdev string, allow_empty bool, local_gateway bool, global_gateway bool) (*Driver, error) {
 	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
 	if err != nil {
 		return nil, err
@@ -80,6 +80,20 @@ func (d *Driver) waitForInterrupt() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	for _ = range sigChan {
 		d.docker.StopAllMonitorEvents()
+	}
+
+	nets, err := d.docker.ListNetworks("")
+	if err != nil {
+		return err
+	}
+	for i := range nets {
+		if nets[i].Driver == "vxlan" && !d.networks[nets[i].ID] {
+			log.Debugf("Net[i]: %+v", nets[i])
+			_, err := d.deleteLinks(nets[i].ID)
+			if err != nil {
+				return err
+			}
+		}
 	}
 }
 
@@ -476,7 +490,7 @@ func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	return nil
 }
 
-func (d *Driver) deleteNics(netID string) error {
+func (d *Driver) deleteLinks(netID string) error {
 	names, err := getIntNames(netID, d.docker)
 	if err != nil {
 		return err
@@ -496,7 +510,7 @@ func (d *Driver) deleteNics(netID string) error {
 
 func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	netID := r.NetworkID
-	return d.deleteNics(netID)
+	return d.deleteLinks(netID)
 }
 
 func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
@@ -536,7 +550,7 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	}
 
 	log.Debugf("No interfaces attached to vxlan: deleting vxlan interface.")
-	return d.deleteNics(netID)
+	return d.deleteLinks(netID)
 }
 
 func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, error) {
