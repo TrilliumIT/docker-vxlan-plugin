@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"errors"
 	"strings"
-	"os/exec"
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
@@ -18,9 +17,6 @@ type Driver struct {
 	network.Driver
 	scope	          string
 	vtepdev           string
-	allow_empty       bool
-	global_gateway    bool
-	block_gateway_arp bool
 	networks          map[string]*NetworkState
 	docker	          *dockerclient.DockerClient
 }
@@ -34,7 +30,7 @@ type NetworkState struct {
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool, block_gateway_arp bool) (*Driver, error) {
+func NewDriver(scope string, vtepdev string) (*Driver, error) {
 	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
 	if err != nil {
 		return nil, err
@@ -42,27 +38,8 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bo
 	d := &Driver{
 		scope: scope,
 		vtepdev: vtepdev,
-		allow_empty: allow_empty,
-		global_gateway: global_gateway,
-		block_gateway_arp: block_gateway_arp,
 		networks: make(map[string]*NetworkState),
 		docker: docker,
-	}
-	if d.allow_empty {
-		nets, err := d.docker.ListNetworks("")
-		log.Debugf("Nets: %+v", nets)
-		if err != nil {
-			return d, err
-		}
-		for i := range nets {
-			if nets[i].Driver == "vxlan" {
-				log.Debugf("Net[i]: %+v", nets[i])
-				_, err := d.getLinks(nets[i].ID)
-				if err != nil {
-					return d, err
-				}
-			}
-		}
 	}
 	return d, nil
 }
@@ -328,9 +305,6 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 		return nil, err
 	}
 
-	blockGatewayArp := false
-	globalGateway := false
-
 	// Parse interface options
 	for k, v := range net.Options {
 		if k == "vxlanHardwareAddr" {
@@ -353,53 +327,6 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 				return nil, err
 			}
 		}
-		if k == "blockGatewayArp" {
-			blockGatewayArp, err = strconv.ParseBool(v)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if k == "globalGateway" {
-			globalGateway, err = strconv.ParseBool(v)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	log.Debugf("checking block gateway arp enabled")
-	if ( d.block_gateway_arp && blockGatewayArp ) {
-		log.Debugf("block gateway arp enabled")
-		for i := range net.IPAM.Config {
-			gatewayIP := net.IPAM.Config[i].Gateway
-			if gatewayIP != "" {
-
-				log.Debugf("Create arptables rules to drop: %+v", gatewayIP)
-
-				cmd := exec.Command(	"arptables",
-							"--append", "FORWARD",
-							"--out-interface", vxlanName,
-							"--destination-ip", gatewayIP,
-							"--opcode", "1",
-							"--jump", "DROP" )
-				err = cmd.Run()
-				if err != nil {
-					return nil, err
-				}
-
-				cmd = exec.Command(	"arptables",
-							"--append", "FORWARD",
-							"--in-interface", vxlanName,
-							"--source-ip", gatewayIP,
-							"--opcode", "2",
-							"--jump", "DROP" )
-				err = cmd.Run()
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-
 	}
 
 	// bring interfaces up
@@ -408,7 +335,7 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 		return nil, err
 	}
 
-	if d.scope == "local" || ( d.global_gateway && globalGateway ){
+	if d.scope == "local" {
 		for i := range net.IPAM.Config {
 			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
 			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway + "/" + mask)
@@ -466,10 +393,6 @@ func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
 
 func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
-	if d.allow_empty {
-		return nil
-	}
-
 	netID := r.NetworkID
 
 	links, err := d.getLinks(netID)
