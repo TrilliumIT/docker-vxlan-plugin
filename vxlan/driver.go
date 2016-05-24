@@ -406,6 +406,9 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 		return err
 	}
 
+	// FIXME: Check for macvlan interfaces with vxlan as parent in every
+	// docker namespace
+
 	for i := range allLinks {
 		if allLinks[i].Attrs().Index != VxlanIndex {
 			return nil
