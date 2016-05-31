@@ -1,8 +1,8 @@
-hash: 0ba06cfb00de6d834dadd3dd7232e4d87d3adc61929f58c3829a4e0ee414bd62
-updated: 2016-05-31T09:12:18.287949621-04:00
+hash: ab15e38bfc9c2cc6199c884deaa7862c2c9203d22739a1855cda8dd915dbd8ee
+updated: 2016-05-31T09:13:48.361466366-04:00
 imports:
 - name: github.com/codegangsta/cli
-  version: 71f57d300dd6a780ac1856c005c4b518cfd498ec
+  version: 9a18ffad6c548ca4d458d4c30a8aa4d181cf92fa
 - name: github.com/coreos/go-systemd
   version: 4484981625c1a6a2ecb40a390fcb6a9bcfee76e3
   subpackages:
@@ -32,7 +32,7 @@ imports:
 - name: github.com/samalba/dockerclient
   version: 9d56ba7eeb4833b44f2bc2ab9a403a77cee40b6e
 - name: github.com/Sirupsen/logrus
-  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
+  version: 6d9ae300aaf85d6acd2e5424081c7fcddb21dab8
 - name: github.com/vishvananda/netlink
   version: e299ab1a585b04a7e7d4d2f609f241b69ca7d326
   subpackages:
