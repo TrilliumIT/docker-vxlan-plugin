@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"fmt"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
@@ -464,6 +465,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 func (d *Driver) Leave(r *network.LeaveRequest) error {
 
 	linkName := "macvlan_" + r.EndpointID[:7]
+	time.Sleep(10 * time.Second)
 	vlanLink, err := netlink.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
