@@ -1,4 +1,4 @@
-FROM golang:1.5.3-wheezy
+FROM golang:1.5.4-wheezy
 
 MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
 
