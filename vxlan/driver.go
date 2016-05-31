@@ -40,7 +40,6 @@ func NewDriver(scope string, vtepdev string) (*Driver, error) {
 		scope: scope,
 		vtepdev: vtepdev,
 		networks: make(map[string]*NetworkState),
-		endpoints: make(map[string]*netlink.Macvlan),
 		docker: docker,
 	}
 	return d, nil
