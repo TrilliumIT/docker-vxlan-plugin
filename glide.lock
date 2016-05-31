@@ -1,5 +1,5 @@
-hash: a97b5ad04a418451cae1475cfdd6bfb97415b801e56e0f094a714f6b7de72e04
-updated: 2016-05-31T09:07:56.305481689-04:00
+hash: 0ba06cfb00de6d834dadd3dd7232e4d87d3adc61929f58c3829a4e0ee414bd62
+updated: 2016-05-31T09:12:18.287949621-04:00
 imports:
 - name: github.com/codegangsta/cli
   version: 71f57d300dd6a780ac1856c005c4b518cfd498ec
@@ -32,7 +32,7 @@ imports:
 - name: github.com/samalba/dockerclient
   version: 9d56ba7eeb4833b44f2bc2ab9a403a77cee40b6e
 - name: github.com/Sirupsen/logrus
-  version: be52937128b38f1d99787bb476c789e2af1147f1
+  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
 - name: github.com/vishvananda/netlink
   version: e299ab1a585b04a7e7d4d2f609f241b69ca7d326
   subpackages:
