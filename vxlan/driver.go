@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"errors"
 	"strings"
-	"os/exec"
+	"fmt"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
@@ -17,9 +17,6 @@ type Driver struct {
 	network.Driver
 	scope	          string
 	vtepdev           string
-	allow_empty       bool
-	global_gateway    bool
-	block_gateway_arp bool
 	networks          map[string]*NetworkState
 	docker	          *dockerclient.DockerClient
 }
@@ -27,14 +24,13 @@ type Driver struct {
 // NetworkState is filled in at network creation time
 // it contains state that we wish to keep for each network
 type NetworkState struct {
-	Bridge	 *netlink.Bridge
 	VXLan	 *netlink.Vxlan
 	Gateway  string
 	IPv4Data []*network.IPAMData
 	IPv6Data []*network.IPAMData
 }
 
-func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bool, block_gateway_arp bool) (*Driver, error) {
+func NewDriver(scope string, vtepdev string) (*Driver, error) {
 	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
 	if err != nil {
 		return nil, err
@@ -42,27 +38,8 @@ func NewDriver(scope string, vtepdev string, allow_empty bool, global_gateway bo
 	d := &Driver{
 		scope: scope,
 		vtepdev: vtepdev,
-		allow_empty: allow_empty,
-		global_gateway: global_gateway,
-		block_gateway_arp: block_gateway_arp,
 		networks: make(map[string]*NetworkState),
 		docker: docker,
-	}
-	if d.allow_empty {
-		nets, err := d.docker.ListNetworks("")
-		log.Debugf("Nets: %+v", nets)
-		if err != nil {
-			return d, err
-		}
-		for i := range nets {
-			if nets[i].Driver == "vxlan" {
-				log.Debugf("Net[i]: %+v", nets[i])
-				_, err := d.getLinks(nets[i].ID)
-				if err != nil {
-					return d, err
-				}
-			}
-		}
 	}
 	return d, nil
 }
@@ -78,7 +55,6 @@ func (d *Driver) GetCapabilities() (*network.CapabilitiesResponse, error) {
 
 type intNames struct {
 	VxlanName  string
-	BridgeName string
 }
 
 func getIntNames(netID string, docker *dockerclient.DockerClient) (*intNames, error) {
@@ -94,16 +70,12 @@ func getIntNames(netID string, docker *dockerclient.DockerClient) (*intNames, er
 		return nil, errors.New("Not a vxlan network")
 	}
 
-	names.BridgeName = "br_" + netID[:12]
 	names.VxlanName = "vx_" + netID[:12]
 
 	// get interface names from options first
 	for k, v := range net.Options {
 		if k == "vxlanName" {
 			names.VxlanName = v
-		}
-		if k == "bridgeName" {
-			names.BridgeName = v
 		}
 	}
 
@@ -126,7 +98,6 @@ func getGateway(netID string, docker dockerclient.DockerClient) (string, error) 
 
 type intLinks struct {
 	Vxlan  *netlink.Vxlan
-	Bridge *netlink.Bridge
 }
 
 // this function gets netlink devices or creates them if they don't exist
@@ -148,18 +119,6 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 	}
 
 	// get or create links
-	var bridge *netlink.Bridge
-	bridgelink, err := netlink.LinkByName(names.BridgeName)
-	if err == nil {
-		bridge = &netlink.Bridge{
-			LinkAttrs: *bridgelink.Attrs(),
-		}
-	} else {
-		bridge, err = d.createBridge(names.BridgeName, net)
-		if err != nil {
-			return nil, err
-		}
-	}
 	var vxlan *netlink.Vxlan
 	vxlanlink, err := netlink.LinkByName(names.VxlanName)
 	if err == nil {
@@ -173,107 +132,11 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 		}
 	}
 
-	// add vxlan to bridge
-	if vxlan.LinkAttrs.MasterIndex == 0 {
-		err = netlink.LinkSetMaster(vxlan, bridge)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	links := &intLinks{
 		Vxlan: vxlan,
-		Bridge: bridge,
 	}
 
 	return links, nil
-}
-
-func (d *Driver) createBridge(bridgeName string, net *dockerclient.NetworkResource) (*netlink.Bridge, error) {
-	bridge := &netlink.Bridge{
-		LinkAttrs: netlink.LinkAttrs{
-			Name: bridgeName,
-		},
-	}
-	// Parse interface options
-	for k, v := range net.Options {
-		if k == "bridgeMTU" {
-			mtu, err := strconv.Atoi(v)
-			if err != nil {
-				return nil, err
-			}
-			bridge.LinkAttrs.MTU = mtu
-		}
-		if k == "bridgeHardwareAddr" {
-			hardwareAddr, err := gonet.ParseMAC(v)
-			if err != nil {
-				return nil, err
-			}
-			bridge.LinkAttrs.HardwareAddr = hardwareAddr
-		}
-		if k == "bridgeTxQLen" {
-			txQLen, err := strconv.Atoi(v)
-			if err != nil {
-				return nil, err
-			}
-			bridge.LinkAttrs.TxQLen = txQLen
-		}
-	}
-
-	err := netlink.LinkAdd(bridge)
-	if err != nil {
-		return nil, err
-	}
-
-	globalGateway := false
-
-	// Parse interface options
-	for k, v := range net.Options {
-		if k == "bridgeHardwareAddr" {
-			hardwareAddr, err := gonet.ParseMAC(v)
-			if err != nil {
-				return nil, err
-			}
-			err = netlink.LinkSetHardwareAddr(bridge, hardwareAddr)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if k == "bridgeMTU" {
-			mtu, err := strconv.Atoi(v)
-			if err != nil {
-				return nil, err
-			}
-			err = netlink.LinkSetMTU(bridge, mtu)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if k == "globalGateway" {
-			globalGateway, err = strconv.ParseBool(v)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	err = netlink.LinkSetUp(bridge)
-	if err != nil {
-		return nil, err
-	}
-
-	if d.scope == "local" || ( d.global_gateway && globalGateway ){
-		for i := range net.IPAM.Config {
-			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
-			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway + "/" + mask)
-			if err != nil {
-				return nil, err
-			}
-			netlink.AddrAdd(bridge, gatewayIP)
-		}
-	}
-
-	return bridge, nil
 }
 
 func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource) (*netlink.Vxlan, error) {
@@ -442,8 +305,6 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 		return nil, err
 	}
 
-	blockGatewayArp := false
-
 	// Parse interface options
 	for k, v := range net.Options {
 		if k == "vxlanHardwareAddr" {
@@ -466,53 +327,23 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 				return nil, err
 			}
 		}
-		if k == "blockGatewayArp" {
-			blockGatewayArp, err = strconv.ParseBool(v)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	log.Debugf("checking block gateway arp enabled")
-	if ( d.block_gateway_arp && blockGatewayArp ) {
-		log.Debugf("block gateway arp enabled")
-		for i := range net.IPAM.Config {
-			gatewayIP := net.IPAM.Config[i].Gateway
-			if gatewayIP != "" {
-
-				log.Debugf("Create arptables rules to drop: %+v", gatewayIP)
-
-				cmd := exec.Command(	"arptables",
-							"--append", "FORWARD",
-							"--out-interface", vxlanName,
-							"--destination-ip", gatewayIP,
-							"--opcode", "1",
-							"--jump", "DROP" )
-				err = cmd.Run()
-				if err != nil {
-					return nil, err
-				}
-
-				cmd = exec.Command(	"arptables",
-							"--append", "FORWARD",
-							"--in-interface", vxlanName,
-							"--source-ip", gatewayIP,
-							"--opcode", "2",
-							"--jump", "DROP" )
-				err = cmd.Run()
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-
 	}
 
 	// bring interfaces up
 	err = netlink.LinkSetUp(vxlan)
 	if err != nil {
 		return nil, err
+	}
+
+	if d.scope == "local" {
+		for i := range net.IPAM.Config {
+			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
+			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway + "/" + mask)
+			if err != nil {
+				return nil, err
+			}
+			netlink.AddrAdd(vxlan, gatewayIP)
+		}
 	}
 
 	return vxlan, nil
@@ -540,14 +371,7 @@ func (d *Driver) deleteNics(netID string) error {
 		}
 		log.Debugf("Deleting interface %+v", names.VxlanName)
 	}
-	bridge, err := netlink.LinkByName(names.BridgeName)
-	if err == nil {
-		err := netlink.LinkDel(bridge)
-		if err != nil {
-			return err
-		}
-		log.Debugf("Deleting interface %+v", names.BridgeName)
-	}
+	
 	return nil
 }
 
@@ -556,44 +380,60 @@ func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	return d.deleteNics(netID)
 }
 
-func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
+func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) (*network.CreateEndpointResponse, error) {
 	log.Debugf("Create endpoint request: %+v", r)
 	netID := r.NetworkID
 	// get the links
 	_, err := d.getLinks(netID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &network.CreateEndpointResponse{}, nil
 }
 
 func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
-	if d.allow_empty {
-		return nil
+
+	// Delete the macvlan interface
+	linkName := "macvlan_" + r.EndpointID[:7]
+	vlanLink, err := netlink.LinkByName(linkName)
+	if err != nil {
+		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
+	}
+	// verify a parent interface isn't being deleted
+	if vlanLink.Attrs().ParentIndex == 0 {
+		return fmt.Errorf("interface %s does not appear to be a slave device: %v", linkName, err)
+	}
+	// delete the macvlan slave device
+	if err := netlink.LinkDel(vlanLink); err != nil {
+		return fmt.Errorf("failed to delete  %s link: %v", linkName, err)
 	}
 
+	log.Debugf("Deleted subinterface: %s", linkName)
 	netID := r.NetworkID
 
+	// If no other subinterfaces of the vxlan exist, delete it too
 	links, err := d.getLinks(netID)
 	if err != nil {
 		return err
 	}
 	VxlanIndex := links.Vxlan.LinkAttrs.Index
-	BridgeIndex := links.Bridge.LinkAttrs.Index
 
 	allLinks, err := netlink.LinkList()
 	if err != nil {
 		return err
 	}
 
+	// FIXME: Check for macvlan interfaces with vxlan as parent in every
+	// docker namespace
+
 	for i := range allLinks {
-		if allLinks[i].Attrs().Index != VxlanIndex && allLinks[i].Attrs().MasterIndex == BridgeIndex {
+		if allLinks[i].Attrs().Index != VxlanIndex {
 			return nil
 		}
 	}
 
-	log.Debugf("No interfaces attached to bridge: deleting vxlan and bridge interfaces.")
+	log.Debugf("No interfaces attached to vxlan: deleting vxlan interface.")
 	return d.deleteNics(netID)
 }
 
@@ -605,44 +445,33 @@ func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, er
 }
 
 func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
+	log.Debugf("Join endpoint request: %+v", r)
 	netID := r.NetworkID
 	// get the links
 	links, err := d.getLinks(netID)
 	if err != nil {
 		return nil, err
 	}
-	// create and attach local name to the bridge
-	veth := &netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5],
-		MTU: links.Bridge.LinkAttrs.MTU },
-		PeerName:  "ethc" + r.EndpointID[:5],
+
+	// Create a macvlan link
+	macvlan := &netlink.Macvlan{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:        "macvlan_" + r.EndpointID[:7],
+			ParentIndex: links.Vxlan.LinkAttrs.Index,
+		},
+		Mode: netlink.MACVLAN_MODE_BRIDGE,
 	}
-	if err := netlink.LinkAdd(veth); err != nil {
-		log.Errorf("failed to create the veth pair named: [ %v ] error: [ %s ] ", veth, err)
+	if err := netlink.LinkAdd(macvlan); err != nil {
 		return nil, err
 	}
 
-	// bring up the veth pair
-	err = netlink.LinkSetUp(veth)
-	if err != nil {
-		log.Warnf("Error enabling  Veth local iface: [ %v ]", veth)
-		return nil, err
-	}
-	
-	// add veth to bridge
-	err = netlink.LinkSetMaster(veth, links.Bridge)
-	if err != nil {
-		return nil, err
-	}
-
-	// SrcName gets renamed to DstPrefix + ID on the container iface
 	gateway, err := getGateway(netID, *d.docker)
 	if err != nil {
 		return nil, err
 	}
 	res := &network.JoinResponse{
 		InterfaceName: network.InterfaceName{
-			SrcName:   veth.PeerName,
+			SrcName:   "macvlan_" + r.EndpointID[:7],
 			DstPrefix: "eth",
 		},
 		Gateway: gateway,
@@ -652,33 +481,16 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 }
 
 func (d *Driver) Leave(r *network.LeaveRequest) error {
-	log.Debugf("Leave request: %+v", r)
+	log.Debugf("Leave endpoint request: %+v", r)
+	return nil
 
-	veth := &netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{Name: "veth_" + r.EndpointID[:5]},
-		PeerName:  "ethc" + r.EndpointID[:5],
-	}
+}
 
-	// bring down the veth pair
-	err := netlink.LinkSetDown(veth)
-	if err != nil {
-		log.Warnf("Error bring down Veth local iface: [ %v ]", veth)
-		return err
-	}
+// The vxlan driver will not expose ports, just respond empty.
+func (d *Driver) ProgramExternalConnectivity(r *network.ProgramExternalConnectivityRequest) error {
+	return nil
+}
 
-	// remove veth from bridge
-	err = netlink.LinkSetNoMaster(veth)
-	if err != nil {
-		log.Warnf("Error removing veth from bridge")
-		return err
-	}
-
-	// delete the veth interface
-	err = netlink.LinkDel(veth)
-	if err != nil {
-		log.Warnf("Error removing veth interface")
-		return err
-	}
-
+func (d *Driver) RevokeExternalConnectivity(r *network.RevokeExternalConnectivityRequest) error {
 	return nil
 }

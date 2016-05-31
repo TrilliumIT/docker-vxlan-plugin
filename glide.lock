@@ -1,47 +1,51 @@
-hash: b35c7a8b7e7809e606b02122652518287352e9b7dc09938ba9ad4930fcc86604
-updated: 2016-03-17T09:47:51.843521612-04:00
+hash: ab15e38bfc9c2cc6199c884deaa7862c2c9203d22739a1855cda8dd915dbd8ee
+updated: 2016-05-31T09:13:48.361466366-04:00
 imports:
-- name: github.com/clinta/docker-vxlan-plugin
-  version: dc8931d778bac6b824e066a0c949be0ac3ed2715
-  subpackages:
-  - vxlan
 - name: github.com/codegangsta/cli
-  version: aca5b047ed14d17224157c3434ea93bf6cdaadee
+  version: 9a18ffad6c548ca4d458d4c30a8aa4d181cf92fa
 - name: github.com/coreos/go-systemd
-  version: 7b2428fec40033549c68f54e26e89e7ca9a9ce31
+  version: 4484981625c1a6a2ecb40a390fcb6a9bcfee76e3
   subpackages:
   - activation
+  - util
+- name: github.com/coreos/pkg
+  version: 7f080b6c11ac2d2347c3cd7521e810207ea1a041
+  subpackages:
+  - dlopen
 - name: github.com/docker/go-connections
-  version: f549a9393d05688dff0992ef3efd8bbe6c628aeb
+  version: c7838b258fbfa3fe88eecfb2a0e08ea0dbd6a646
   subpackages:
   - sockets
 - name: github.com/docker/go-plugins-helpers
-  version: 94650054f38b80ab066a72e945a9e7553c292ff1
+  version: b6b774486d89219eba2d2b72ed50d32880167671
   subpackages:
   - network
   - sdk
 - name: github.com/docker/go-units
-  version: 5d2041e26a699eaca682e2ea41c8f891e1060444
+  version: 09dda9d4b0d748c57c14048906d3d094a58ec0c9
 - name: github.com/Microsoft/go-winio
-  version: 8f9387ea7efabb228a981b9c381142be7667967f
+  version: 4f1a71750d95a5a8a46c40a67ffbed8129c2f138
 - name: github.com/opencontainers/runc
-  version: 015fad9fa88c8e214d4e2c0a7809bac18380ec7e
+  version: 392a6597338254254b26ffd3cceb941bff70079c
   subpackages:
   - libcontainer/user
 - name: github.com/samalba/dockerclient
-  version: f274bbd0e2eb35ad1444dc6e6660214f9fbbc08c
+  version: 9d56ba7eeb4833b44f2bc2ab9a403a77cee40b6e
 - name: github.com/Sirupsen/logrus
-  version: be52937128b38f1d99787bb476c789e2af1147f1
+  version: 6d9ae300aaf85d6acd2e5424081c7fcddb21dab8
 - name: github.com/vishvananda/netlink
-  version: 4fdf23c882685717a2a750114bdc904afeafc16b
+  version: e299ab1a585b04a7e7d4d2f609f241b69ca7d326
   subpackages:
   - nl
+- name: github.com/vishvananda/netns
+  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/net
-  version: 35b06af0720201bc2f326773a80767387544f8c4
+  version: 7553b97266dcbbf78298bd1a2b12d9c9aaae5f40
   subpackages:
   - proxy
 - name: golang.org/x/sys
-  version: 9d4e42a20653790449273b3c85e67d6d8bae6e2e
+  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
   subpackages:
   - unix
+  - windows
 devImports: []
