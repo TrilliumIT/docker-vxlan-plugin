@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 	"fmt"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
@@ -394,8 +393,26 @@ func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) (*network.Crea
 
 func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	log.Debugf("Delete endpoint request: %+v", r)
+
+	// Delete the macvlan interface
+	linkName := "macvlan_" + r.EndpointID[:7]
+	vlanLink, err := netlink.LinkByName(linkName)
+	if err != nil {
+		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
+	}
+	// verify a parent interface isn't being deleted
+	if vlanLink.Attrs().ParentIndex == 0 {
+		return fmt.Errorf("interface %s does not appear to be a slave device: %v", linkName, err)
+	}
+	// delete the macvlan slave device
+	if err := netlink.LinkDel(vlanLink); err != nil {
+		return fmt.Errorf("failed to delete  %s link: %v", linkName, err)
+	}
+
+	log.Debugf("Deleted subinterface: %s", linkName)
 	netID := r.NetworkID
 
+	// If no other subinterfaces of the vxlan exist, delete it too
 	links, err := d.getLinks(netID)
 	if err != nil {
 		return err
@@ -428,6 +445,7 @@ func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, er
 }
 
 func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
+	log.Debugf("Join endpoint request: %+v", r)
 	netID := r.NetworkID
 	// get the links
 	links, err := d.getLinks(netID)
@@ -463,23 +481,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 }
 
 func (d *Driver) Leave(r *network.LeaveRequest) error {
-
-	linkName := "macvlan_" + r.EndpointID[:7]
-	time.Sleep(10 * time.Second)
-	vlanLink, err := netlink.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
-	}
-	// verify a parent interface isn't being deleted
-	if vlanLink.Attrs().ParentIndex == 0 {
-		return fmt.Errorf("interface %s does not appear to be a slave device: %v", linkName, err)
-	}
-	// delete the macvlan slave device
-	if err := netlink.LinkDel(vlanLink); err != nil {
-		return fmt.Errorf("failed to delete  %s link: %v", linkName, err)
-	}
-
-	log.Debugf("Deleted subinterface: %s", linkName)
+	log.Debugf("Leave endpoint request: %+v", r)
 	return nil
 
 }
