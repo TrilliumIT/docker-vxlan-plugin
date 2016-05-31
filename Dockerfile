@@ -1,9 +1,20 @@
-FROM debian:jessie
-ENV VER=v0.5.1
+FROM golang:1.5.3-wheezy
 
 MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
 
-ADD https://github.com/clinta/docker-vxlan-plugin/releases/download/${VER}/docker-vxlan-plugin /docker-vxlan-plugin
-RUN chmod +x /docker-vxlan-plugin
+ENV GO15VENDOREXPERIMENT 1
 
-ENTRYPOINT ["/docker-vxlan-plugin"]
+RUN go get github.com/Masterminds/glide
+
+ENV SRC_ROOT /go/src/github.com/clinta/docker-vxlan-plugin 
+
+# Setup our directory and give convenient path via ln.
+RUN mkdir -p ${SRC_ROOT}
+
+WORKDIR ${SRC_ROOT}
+
+# Used to only go get if sources change.
+ADD . ${SRC_ROOT}/
+RUN go get -t $($GOPATH/bin/glide novendor)
+
+ENTRYPOINT ["$GOPATH/bin/docker-vxlan-plugin"]

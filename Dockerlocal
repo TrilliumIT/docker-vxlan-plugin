@@ -1,7 +1,0 @@
-FROM debian:jessie
-
-MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
-
-ADD docker-vxlan-plugin /docker-vxlan-plugin
-
-ENTRYPOINT ["/docker-vxlan-plugin"]
