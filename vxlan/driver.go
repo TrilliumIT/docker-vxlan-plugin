@@ -483,3 +483,12 @@ func (d *Driver) Leave(r *network.LeaveRequest) error {
 	return nil
 
 }
+
+// The vxlan driver will not expose ports, just respond empty.
+func (d *Driver) ProgramExternalConnectivity(r *network.ProgramExternalConnectivityRequest) error {
+	return nil
+}
+
+func (d *Driver) RevokeExternalConnectivity(r *network.RevokeExternalConnectivityRequest) error {
+	return nil
+}
