@@ -18,7 +18,6 @@ type Driver struct {
 	scope	          string
 	vtepdev           string
 	networks          map[string]*NetworkState
-	endpoints         map[string]*netlink.Macvlan
 	docker	          *dockerclient.DockerClient
 }
 
@@ -446,7 +445,6 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	if err := netlink.LinkAdd(macvlan); err != nil {
 		return nil, err
 	}
-	d.endpoints[r.EndpointID] = macvlan
 
 	gateway, err := getGateway(netID, *d.docker)
 	if err != nil {
@@ -465,22 +463,21 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 
 func (d *Driver) Leave(r *network.LeaveRequest) error {
 
-	//linkName := "macvlan_" + r.EndpointID[:7]
-	//vlanLink, err := netlink.LinkByName(linkName)
-	vlanLink := d.endpoints[r.EndpointID]
-	//if err != nil {
-	//	return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
-	//}
+	linkName := "macvlan_" + r.EndpointID[:7]
+	vlanLink, err := netlink.LinkByName(linkName)
+	if err != nil {
+		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
+	}
 	// verify a parent interface isn't being deleted
 	if vlanLink.Attrs().ParentIndex == 0 {
-		return fmt.Errorf("interface %s does not appear to be a slave device: %v", vlanLink)
+		return fmt.Errorf("interface %s does not appear to be a slave device: %v", linkName, err)
 	}
 	// delete the macvlan slave device
 	if err := netlink.LinkDel(vlanLink); err != nil {
-		return fmt.Errorf("failed to delete  %s link: %v", vlanLink, err)
+		return fmt.Errorf("failed to delete  %s link: %v", linkName, err)
 	}
 
-	log.Debugf("Deleted subinterface: %s", vlanLink)
+	log.Debugf("Deleted subinterface: %s", linkName)
 	return nil
 
 }
