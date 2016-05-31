@@ -1,5 +1,5 @@
 hash: ab15e38bfc9c2cc6199c884deaa7862c2c9203d22739a1855cda8dd915dbd8ee
-updated: 2016-05-31T13:12:46.971803971-04:00
+updated: 2016-05-31T16:40:11.958967499-04:00
 imports:
 - name: github.com/codegangsta/cli
   version: 9a18ffad6c548ca4d458d4c30a8aa4d181cf92fa
@@ -26,15 +26,15 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: 4f1a71750d95a5a8a46c40a67ffbed8129c2f138
 - name: github.com/opencontainers/runc
-  version: 88bb59e35f71bffa94b39722c0faf61e411c83bf
+  version: 37f27d5d3b491649451375be2a2ed9170c071757
   subpackages:
   - libcontainer/user
 - name: github.com/samalba/dockerclient
-  version: 9d56ba7eeb4833b44f2bc2ab9a403a77cee40b6e
+  version: a3036261847103270e9f732509f43b5f98710ace
 - name: github.com/Sirupsen/logrus
   version: 6d9ae300aaf85d6acd2e5424081c7fcddb21dab8
 - name: github.com/vishvananda/netlink
-  version: e299ab1a585b04a7e7d4d2f609f241b69ca7d326
+  version: 7995ff5647a22cbf0dc41bf5c0e977bdb0d5c6b7
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
