@@ -1,5 +1,5 @@
 hash: ab15e38bfc9c2cc6199c884deaa7862c2c9203d22739a1855cda8dd915dbd8ee
-updated: 2016-05-31T09:13:48.361466366-04:00
+updated: 2016-05-31T13:12:46.971803971-04:00
 imports:
 - name: github.com/codegangsta/cli
   version: 9a18ffad6c548ca4d458d4c30a8aa4d181cf92fa
@@ -26,7 +26,7 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: 4f1a71750d95a5a8a46c40a67ffbed8129c2f138
 - name: github.com/opencontainers/runc
-  version: 392a6597338254254b26ffd3cceb941bff70079c
+  version: 88bb59e35f71bffa94b39722c0faf61e411c83bf
   subpackages:
   - libcontainer/user
 - name: github.com/samalba/dockerclient
@@ -40,7 +40,7 @@ imports:
 - name: github.com/vishvananda/netns
   version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/net
-  version: 7553b97266dcbbf78298bd1a2b12d9c9aaae5f40
+  version: c4c3ea71919de159c9e246d7be66deb7f0a39a58
   subpackages:
   - proxy
 - name: golang.org/x/sys
