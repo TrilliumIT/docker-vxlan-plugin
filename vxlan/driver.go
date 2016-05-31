@@ -437,7 +437,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	// Create a macvlan link
 	macvlan := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:        "macvlan_" + r.EndpointID[:5],
+			Name:        "macvlan_" + r.EndpointID[:7],
 			ParentIndex: links.Vxlan.LinkAttrs.Index,
 		},
 		Mode: netlink.MACVLAN_MODE_BRIDGE,
@@ -452,7 +452,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 	}
 	res := &network.JoinResponse{
 		InterfaceName: network.InterfaceName{
-			SrcName:   "macvlan_" + r.EndpointID[:5],
+			SrcName:   "macvlan_" + r.EndpointID[:7],
 			DstPrefix: "eth",
 		},
 		Gateway: gateway,
@@ -463,7 +463,7 @@ func (d *Driver) Join(r *network.JoinRequest) (*network.JoinResponse, error) {
 
 func (d *Driver) Leave(r *network.LeaveRequest) error {
 
-	linkName := "macvlan_" + r.EndpointID[:5]
+	linkName := "macvlan_" + r.EndpointID[:7]
 	vlanLink, err := netlink.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to find interface %s on the Docker host : %v", linkName, err)
