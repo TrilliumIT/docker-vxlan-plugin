@@ -5,7 +5,6 @@ import:
 - package: github.com/codegangsta/cli
   version: ~1.14.0
 - package: github.com/docker/go-plugins-helpers
-  version: 94650054f38b80ab066a72e945a9e7553c292ff1
   subpackages:
   - network
 - package: github.com/samalba/dockerclient

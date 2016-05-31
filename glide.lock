@@ -1,18 +1,23 @@
-hash: 47aa8909d98ecc92d22049225d6265d148ed4d672cb0844c29ae47a871e8008b
-updated: 2016-05-24T17:00:53.003151251-04:00
+hash: a97b5ad04a418451cae1475cfdd6bfb97415b801e56e0f094a714f6b7de72e04
+updated: 2016-05-31T09:07:56.305481689-04:00
 imports:
 - name: github.com/codegangsta/cli
   version: 71f57d300dd6a780ac1856c005c4b518cfd498ec
 - name: github.com/coreos/go-systemd
-  version: 1d9051fe7a349daf6dac904c0b277c3520c09368
+  version: 4484981625c1a6a2ecb40a390fcb6a9bcfee76e3
   subpackages:
   - activation
+  - util
+- name: github.com/coreos/pkg
+  version: 7f080b6c11ac2d2347c3cd7521e810207ea1a041
+  subpackages:
+  - dlopen
 - name: github.com/docker/go-connections
   version: c7838b258fbfa3fe88eecfb2a0e08ea0dbd6a646
   subpackages:
   - sockets
 - name: github.com/docker/go-plugins-helpers
-  version: 94650054f38b80ab066a72e945a9e7553c292ff1
+  version: b6b774486d89219eba2d2b72ed50d32880167671
   subpackages:
   - network
   - sdk
@@ -21,21 +26,21 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: 4f1a71750d95a5a8a46c40a67ffbed8129c2f138
 - name: github.com/opencontainers/runc
-  version: aa7e27eac9b1d5d7963b816d01f22a06ed374eda
+  version: 392a6597338254254b26ffd3cceb941bff70079c
   subpackages:
   - libcontainer/user
 - name: github.com/samalba/dockerclient
-  version: 91d7393ff85980ba3a8966405871a3d446ca28f2
+  version: 9d56ba7eeb4833b44f2bc2ab9a403a77cee40b6e
 - name: github.com/Sirupsen/logrus
   version: be52937128b38f1d99787bb476c789e2af1147f1
 - name: github.com/vishvananda/netlink
-  version: 2ce23437df53e7d472dc65aa23b303407d02d62e
+  version: e299ab1a585b04a7e7d4d2f609f241b69ca7d326
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
   version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/net
-  version: 0c607074acd38c5f23d1344dfe74c977464d1257
+  version: 7553b97266dcbbf78298bd1a2b12d9c9aaae5f40
   subpackages:
   - proxy
 - name: golang.org/x/sys

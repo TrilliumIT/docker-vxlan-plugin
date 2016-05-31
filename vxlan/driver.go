@@ -380,15 +380,15 @@ func (d *Driver) DeleteNetwork(r *network.DeleteNetworkRequest) error {
 	return d.deleteNics(netID)
 }
 
-func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) error {
+func (d *Driver) CreateEndpoint(r *network.CreateEndpointRequest) (*network.CreateEndpointResponse, error) {
 	log.Debugf("Create endpoint request: %+v", r)
 	netID := r.NetworkID
 	// get the links
 	_, err := d.getLinks(netID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &network.CreateEndpointResponse{}, nil
 }
 
 func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
