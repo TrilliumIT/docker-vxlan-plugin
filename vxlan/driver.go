@@ -351,9 +351,6 @@ func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource
 
 func (d *Driver) CreateNetwork(r *network.CreateNetworkRequest) error {
 	log.Debugf("Create network request: %+v", r)
-
-	// return nil and lazy create the network when a container joins it
-	// Active creation when allow_empty is enabled will be handled by watching libkv
 	return nil
 }
 
@@ -428,7 +425,7 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	// docker namespace
 
 	for i := range allLinks {
-		if allLinks[i].Attrs().Index != VxlanIndex {
+		if allLinks[i].Attrs().MasterIndex == VxlanIndex {
 			return nil
 		}
 	}
