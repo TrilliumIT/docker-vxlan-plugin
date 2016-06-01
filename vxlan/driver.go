@@ -426,6 +426,7 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 
 	for i := range allLinks {
 		if allLinks[i].Attrs().MasterIndex == VxlanIndex {
+			log.Debugf("Interface still attached to vxlan: %v", allLinks[i])
 			return nil
 		}
 	}
