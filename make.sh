@@ -3,7 +3,7 @@ set -e
 
 LATEST_RELEASE=$(git describe --tags --abbrev=0 | sed "s/^v//g")
 MAIN_VER=$(grep "version = " main.go | sed 's/[ \t]*version[ \t]*=[ \t]*//g' | sed 's/"//g')
-VERS="${LATEST_RELEASE}\n${DOCKER_VER}\n${MAIN_VER}"
+VERS="${LATEST_RELEASE}\n${MAIN_VER}"
 
 # For tagged commits
 if [ "$(git describe --tags)" = "$(git describe --tags --abbrev=0)" ] ; then
