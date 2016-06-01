@@ -17,7 +17,7 @@ When a container joins a network created with the vxlan driver if doesn't alread
 ### Run from docker
 
 ```sh
-docker run -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock --privileged  --net=host trilliumit/docker-vxlan-plugin
+docker run -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock --privileged  --net=host TrilliumIT/docker-vxlan-plugin
 ```
 
 The plugin must be run in privileged mode with host networking to be able to add network links to the system.

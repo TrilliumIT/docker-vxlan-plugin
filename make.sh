@@ -24,4 +24,4 @@ else
 	DKR_TAG="master"
 fi
 
-docker build -t trilliumit/docker-vxlan-plugin:v${MAIN_VER} -t trilliumit/docker-vxlan-plugin:${DKR_TAG} . || exit $?
+docker build -t TrilliumIT/docker-vxlan-plugin:v${MAIN_VER} -t TrilliumIT/docker-vxlan-plugin:${DKR_TAG} . || exit $?

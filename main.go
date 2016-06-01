@@ -2,9 +2,9 @@ package main
 
 import (
 	"os"
+        "github.com/TrilliumIT/docker-vxlan-plugin/vxlan"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/trilliumit/docker-vxlan-plugin/vxlan"
 	"github.com/docker/go-plugins-helpers/network"
 	"github.com/codegangsta/cli"
 )

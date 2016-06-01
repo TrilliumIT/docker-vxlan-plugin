@@ -6,7 +6,7 @@ ENV GO15VENDOREXPERIMENT 1
 
 RUN go get github.com/Masterminds/glide
 
-ENV SRC_ROOT /go/src/github.com/trilliumit/docker-vxlan-plugin 
+ENV SRC_ROOT /go/src/github.com/TrilliumIT/docker-vxlan-plugin 
 
 # Setup our directory and give convenient path via ln.
 RUN mkdir -p ${SRC_ROOT}

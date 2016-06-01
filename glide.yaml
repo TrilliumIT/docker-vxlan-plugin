@@ -1,4 +1,4 @@
-package: github.com/trilliumit/docker-vxlan-plugin
+package: github.com/TrilliumIT/docker-vxlan-plugin
 import:
 - package: github.com/Sirupsen/logrus
 - package: github.com/codegangsta/cli
