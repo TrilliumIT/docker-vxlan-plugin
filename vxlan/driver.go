@@ -130,7 +130,7 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 			LinkAttrs: *vxlanlink.Attrs(),
 		}
 	} else {
-		vxlan, err = d.createVxLan(names.VxlanName, net)
+		vxlan, err = d.createVxLan(names.VxlanName, &net)
 		if err != nil {
 			return nil, err
 		}
