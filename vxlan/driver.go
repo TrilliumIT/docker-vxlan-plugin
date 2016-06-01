@@ -95,9 +95,9 @@ func getGateway(netID string, docker dockerclient.Client) (string, error) {
 		return "", err
 	}
 
-	for i := range net.IPAM.Config {
-		if net.IPAM.Config[i].Gateway != "" {
-			return net.IPAM.Config[i].Gateway, nil
+	for _, config := range net.IPAM.Config {
+		if config.Gateway != "" {
+			return config.Gateway, nil
 		}
 	}
 	return "", nil
@@ -372,9 +372,9 @@ func (d *Driver) createVxLan(vxlanName string, net *dockertypes.NetworkResource)
 	}
 
 	if d.scope == "local" {
-		for i := range net.IPAM.Config {
-			mask := strings.Split(net.IPAM.Config[i].Subnet, "/")[1]
-			gatewayIP, err := netlink.ParseAddr(net.IPAM.Config[i].Gateway + "/" + mask)
+		for _, config := range net.IPAM.Config {
+			mask := strings.Split(config.Subnet, "/")[1]
+			gatewayIP, err := netlink.ParseAddr(config.Gateway + "/" + mask)
 			if err != nil {
 				log.Errorf("Error parsing gateway address: %v", err)
 				return nil, err
@@ -469,9 +469,9 @@ func (d *Driver) cleanup(netID string) {
 	}
 
 	// Do nothing if other interfaces are slaves of the vxlan interface
-	for i := range allLinks {
-		if allLinks[i].Attrs().MasterIndex == VxlanIndex {
-			log.Debugf("Interface still attached to vxlan: %v", allLinks[i])
+	for _, link := range allLinks {
+		if link.Attrs().MasterIndex == VxlanIndex {
+			log.Debugf("Interface still attached to vxlan: %v", link)
 			return
 		}
 	}
@@ -490,10 +490,8 @@ func (d *Driver) cleanup(netID string) {
 		return
 	}
 	log.Debugf("%v containers running.", len(containers))
-	for i := range containers {
-		log.Debugf("Checking container %v", i)
-		log.Debugf("container: %v", containers[i])
-		if _, ok := containers[i].NetworkSettings.Networks[netName]; ok  {
+	for _, container := range containers {
+		if _, ok := container.NetworkSettings.Networks[netName]; ok  {
 			log.Debugf("Other containers are still connected to this network")
 			return
 		}
