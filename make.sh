@@ -6,7 +6,7 @@ MAIN_VER=$(grep "version = " main.go | sed 's/[ \t]*version[ \t]*=[ \t]*//g' | s
 VERS="${LATEST_RELEASE}\n${DOCKER_VER}\n${MAIN_VER}"
 
 # For tagged commits
-if [ "$(git describe --tags)" = "${LATEST_RELEASE}" ] ; then
+if [ "$(git describe --tags)" = "$(git describe --tags --abbrev=0)" ] ; then
 	if [ $(printf ${VERS} | uniq | wc -l) -gt 1 ] ; then
 		echo "This is a release, all versions should match"
 		exit 1
