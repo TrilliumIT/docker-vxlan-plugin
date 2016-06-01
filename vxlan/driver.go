@@ -9,8 +9,11 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
-	"github.com/samalba/dockerclient"
 	"github.com/vishvananda/netlink"
+
+	"golang.org/x/net/context"
+	dockerclient "github.com/docker/engine-api/client"
+	dockertypes "github.com/docker/engine-api/types"
 )
 
 type Driver struct {
@@ -18,7 +21,7 @@ type Driver struct {
 	scope	          string
 	vtepdev           string
 	networks          map[string]*NetworkState
-	docker	          *dockerclient.DockerClient
+	docker	          *dockerclient.Client
 }
 
 // NetworkState is filled in at network creation time
@@ -31,7 +34,8 @@ type NetworkState struct {
 }
 
 func NewDriver(scope string, vtepdev string) (*Driver, error) {
-	docker, err := dockerclient.NewDockerClient("unix:///var/run/docker.sock", nil)
+	defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+	docker, err := dockerclient.NewClient("unix:///var/run/docker.sock", "v1.23", nil, defaultHeaders)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +61,8 @@ type intNames struct {
 	VxlanName  string
 }
 
-func getIntNames(netID string, docker *dockerclient.DockerClient) (*intNames, error) {
-	net, err := docker.InspectNetwork(netID)
+func getIntNames(netID string, docker *dockerclient.Client) (*intNames, error) {
+	net, err := docker.NetworkInspect(context.Background(), netID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +86,8 @@ func getIntNames(netID string, docker *dockerclient.DockerClient) (*intNames, er
 	return names, nil
 }
 
-func getGateway(netID string, docker dockerclient.DockerClient) (string, error) {
-	net, err := docker.InspectNetwork(netID)
+func getGateway(netID string, docker dockerclient.Client) (string, error) {
+	net, err := docker.NetworkInspect(context.Background(), netID)
 	if err != nil {
 		return "", err
 	}
@@ -103,7 +107,7 @@ type intLinks struct {
 // this function gets netlink devices or creates them if they don't exist
 func (d *Driver) getLinks(netID string) (*intLinks, error) {
 	docker := d.docker
-	net, err := docker.InspectNetwork(netID)
+	net, err := docker.NetworkInspect(context.Background(), netID)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +143,7 @@ func (d *Driver) getLinks(netID string) (*intLinks, error) {
 	return links, nil
 }
 
-func (d *Driver) createVxLan(vxlanName string, net *dockerclient.NetworkResource) (*netlink.Vxlan, error) {
+func (d *Driver) createVxLan(vxlanName string, net *dockertypes.NetworkResource) (*netlink.Vxlan, error) {
 	vxlan := &netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: vxlanName,
@@ -421,15 +425,15 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 		return err
 	}
 
-	// FIXME: Check for macvlan interfaces with vxlan as parent in every
-	// docker namespace
-
 	for i := range allLinks {
 		if allLinks[i].Attrs().MasterIndex == VxlanIndex {
 			log.Debugf("Interface still attached to vxlan: %v", allLinks[i])
 			return nil
 		}
 	}
+
+	// FIXME: Check for macvlan interfaces with vxlan as parent in every
+	// docker namespace
 
 	log.Debugf("No interfaces attached to vxlan: deleting vxlan interface.")
 	return d.deleteNics(netID)

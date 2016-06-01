@@ -1,8 +1,8 @@
-hash: be07715477a62c89073bcbab8abbb357c1353996f454d2964e92d78a21cae647
-updated: 2016-06-01T08:38:36.519744665-04:00
+hash: 17ce35fe44b3690c8bf1c886d0184fa3245840f63fa167eabe6eda2a58cf9b8b
+updated: 2016-06-01T10:00:14.586085215-04:00
 imports:
 - name: github.com/codegangsta/cli
-  version: 9a18ffad6c548ca4d458d4c30a8aa4d181cf92fa
+  version: ddb6f4417968415b617c97b7fb68bdff60a6f6d5
 - name: github.com/coreos/go-systemd
   version: 4484981625c1a6a2ecb40a390fcb6a9bcfee76e3
   subpackages:
@@ -12,10 +12,33 @@ imports:
   version: 7f080b6c11ac2d2347c3cd7521e810207ea1a041
   subpackages:
   - dlopen
+- name: github.com/docker/distribution
+  version: d9c4f03bcce7a4967b5ec07d7028786c4081b890
+  subpackages:
+  - reference
+  - digest
+- name: github.com/docker/engine-api
+  version: dbdcba0b66ca7624c8c9d55c2201a2a5c62d8258
+  subpackages:
+  - client
+  - types
+  - client/transport
+  - client/transport/cancellable
+  - types/container
+  - types/filters
+  - types/network
+  - types/reference
+  - types/registry
+  - types/time
+  - types/blkiodev
+  - types/strslice
+  - types/versions
 - name: github.com/docker/go-connections
   version: c7838b258fbfa3fe88eecfb2a0e08ea0dbd6a646
   subpackages:
   - sockets
+  - tlsconfig
+  - nat
 - name: github.com/docker/go-plugins-helpers
   version: b6b774486d89219eba2d2b72ed50d32880167671
   subpackages:
@@ -29,8 +52,6 @@ imports:
   version: 4450f7c8dea183407c91c35b19051eea22dc5965
   subpackages:
   - libcontainer/user
-- name: github.com/samalba/dockerclient
-  version: a3036261847103270e9f732509f43b5f98710ace
 - name: github.com/Sirupsen/logrus
   version: f3cfb454f4c209e6668c95216c4744b8fddb2356
 - name: github.com/vishvananda/netlink
@@ -40,11 +61,12 @@ imports:
 - name: github.com/vishvananda/netns
   version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/net
-  version: c4c3ea71919de159c9e246d7be66deb7f0a39a58
+  version: 4876518f9e71663000c348837735820161a42df7
   subpackages:
+  - context
   - proxy
 - name: golang.org/x/sys
-  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
+  version: 076b546753157f758b316e59bcb51e6807c04057
   subpackages:
   - unix
   - windows

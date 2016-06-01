@@ -2,8 +2,14 @@ package: github.com/TrilliumIT/docker-vxlan-plugin
 import:
 - package: github.com/Sirupsen/logrus
 - package: github.com/codegangsta/cli
+- package: github.com/docker/engine-api
+  subpackages:
+  - client
+  - types
 - package: github.com/docker/go-plugins-helpers
   subpackages:
   - network
-- package: github.com/samalba/dockerclient
 - package: github.com/vishvananda/netlink
+- package: golang.org/x/net
+  subpackages:
+  - context
