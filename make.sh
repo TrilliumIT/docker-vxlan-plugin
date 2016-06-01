@@ -21,7 +21,7 @@ else
 		echo "Please increment the version in main.go"
 		exit 1
 	fi
-	DKR_TAG="prerelease"
+	DKR_TAG="master"
 fi
 
-docker build -t clinta/docker-vxlan-plugin:v${MAIN_VER} -t clinta/docker-vxlan-plugin:${DKR_TAG} . || exit $?
+docker build -t trilliumit/docker-vxlan-plugin:v${MAIN_VER} -t trilliumit/docker-vxlan-plugin:${DKR_TAG} . || exit $?
