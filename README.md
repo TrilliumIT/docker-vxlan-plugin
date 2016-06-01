@@ -10,14 +10,14 @@ Follow the [Tutorial](tutorial.md) for how to get up and running quickly with do
 
 ## How it works
 
-When a container joins a network created with the vxlan driver if they don't already exist a vxlan interface and linux bridge interface are created. The vxlan interface is added to the bridge. The veth device is then created and the host side of the veth is added to the bridge, the container side is passed back to the docker daemon to be put in the container's namespace.
+When a container joins a network created with the vxlan driver if doesn't already exist a [vxlan interface](https://www.kernel.org/doc/Documentation/networking/vxlan.txt) is created. [MacVlan](http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets) interfaces are created for each container and attached to the vxlan interface.
 
 ## Running the plugin
 
 ### Run from docker
 
 ```sh
-docker run -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock --privileged  --net=host clinta/docker-vxlan-plugin
+docker run -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock --privileged  --net=host trilliumit/docker-vxlan-plugin
 ```
 
 The plugin must be run in privileged mode with host networking to be able to add network links to the system.
@@ -45,22 +45,6 @@ The device to use as the VTep endpoint. If this is specified as a daemon option 
 ### Network create options
 
 The following options can be passed to `docker network create` as `-o option=value`. Please consult the man page for ip link and see the vxlan section for more details on some of these options.
-
-#### bridgeName
-
-Name of the bridge interface
-
-#### bridgeMTU
-
-MTU of the bridge interface. Container interfaces inherit their MTU from the bridge interface.
-
-#### bridgeHardwareAddr
-
-MAC Address of the bridge interface.
-
-#### bridgeTXQLen
-
-Transaction Queue Length of the bridge interface
 
 #### vxlanName
 
