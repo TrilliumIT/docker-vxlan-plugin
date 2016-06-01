@@ -60,9 +60,9 @@ $ eval $(docker-machine env --swarm swarm-master)
 5. Now your docker swarm is up and running. Time to run the vxlan driver. You need to run this on every node in the swarm, so we'll use [constraints](https://docs.docker.com/swarm/scheduler/filter/) to do it.
 
 ```
-$ docker run -d --restart=unless-stopped -e constraint:node==swarm-master --net=host --privileged -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock clinta/docker-vxlan-plugin:latest -scope=global
-$ docker run -d --restart=unless-stopped -e constraint:node==swarm-agent-00 --net=host --privileged -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock clinta/docker-vxlan-plugin:latest -scope=global
-$ docker run -d --restart=unless-stopped -e constraint:node==swarm-agent-01 --net=host --privileged -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock clinta/docker-vxlan-plugin:latest -scope=global
+$ docker run -d --restart=unless-stopped -e constraint:node==swarm-master --net=host --privileged -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock trilliumit/docker-vxlan-plugin:latest -scope=global
+$ docker run -d --restart=unless-stopped -e constraint:node==swarm-agent-00 --net=host --privileged -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock trilliumit/docker-vxlan-plugin:latest -scope=global
+$ docker run -d --restart=unless-stopped -e constraint:node==swarm-agent-01 --net=host --privileged -v /run/docker/plugins/:/run/docker/plugins -v /var/run/docker.sock:/var/run/docker.sock trilliumit/docker-vxlan-plugin:latest -scope=global
 ```
 
 6. Now you can create a docker vxlan network for containers to use to communicate between hosts.
