@@ -477,6 +477,13 @@ func (d *Driver) cleanup(netID string) {
 	}
 
 	// Do nothing if there are other containers in this network
+	netResource, err := d.docker.NetworkInspect(context.Background(), netID)
+	if err != nil {
+		log.Errorf("Error inspecting network: %v", err)
+		return
+	}
+	netName := netResource.Name
+
 	containers, err := d.docker.ContainerList(context.Background(), dockertypes.ContainerListOptions{})
 	if err != nil {
 		log.Errorf("Error getting containers: %v", err)
@@ -486,7 +493,7 @@ func (d *Driver) cleanup(netID string) {
 	for i := range containers {
 		log.Debugf("Checking container %v", i)
 		log.Debugf("container: %v", containers[i])
-		if _, ok := containers[i].NetworkSettings.Networks[netID]; ok  {
+		if _, ok := containers[i].NetworkSettings.Networks[netName]; ok  {
 			log.Debugf("Other containers are still connected to this network")
 			return
 		}
