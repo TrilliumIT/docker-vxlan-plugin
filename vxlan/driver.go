@@ -448,43 +448,56 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 	}
 
 	log.Debugf("Deleted subinterface: %s", linkName)
-	netID := r.NetworkID
 
-	// If no other subinterfaces of the vxlan exist, delete it too
+	// Asynchronously check and remove the vxlan interface if nothing else is using it.
+	go d.cleanup(r.NetworkID)
+	return nil
+}
+
+func (d *Driver) cleanup(netID string) {
 	links, err := d.getLinks(netID)
 	if err != nil {
-		return err
+		log.Errorf("Error getting links: %v", err)
+		return
 	}
 	VxlanIndex := links.Vxlan.LinkAttrs.Index
 
 	allLinks, err := netlink.LinkList()
 	if err != nil {
-		return err
+		log.Errorf("Error getting all links: %v", err)
+		return
 	}
 
+	// Do nothing if other interfaces are slaves of the vxlan interface
 	for i := range allLinks {
 		if allLinks[i].Attrs().MasterIndex == VxlanIndex {
 			log.Debugf("Interface still attached to vxlan: %v", allLinks[i])
-			return nil
+			return
 		}
 	}
 
-	// FIXME: Check for macvlan interfaces with vxlan as parent in every
-	// docker namespace
-	docker := d.docker
-	containers, err := docker.ContainerList(context.Background(), dockertypes.ContainerListOptions{})
+	// Do nothing if there are other containers in this network
+	containers, err := d.docker.ContainerList(context.Background(), dockertypes.ContainerListOptions{})
 	if err != nil {
-		return err
+		log.Errorf("Error getting containers: %v", err)
+		return
 	}
+	log.Debugf("%v containers running.", len(containers))
 	for i := range containers {
+		log.Debugf("Checking container %v", i)
+		log.Debugf("container: %v", containers[i])
 		if _, ok := containers[i].NetworkSettings.Networks[netID]; ok  {
 			log.Debugf("Other containers are still connected to this network")
-			return nil
+			return
 		}
 	}
 
 	log.Debugf("No interfaces attached to vxlan: deleting vxlan interface.")
-	return d.deleteNics(netID)
+	err = d.deleteNics(netID)
+	if err != nil {
+		log.Errorf("Error deleting nics: %v", err)
+	}
+	return
 }
 
 func (d *Driver) EndpointInfo(r *network.InfoRequest) (*network.InfoResponse, error) {
