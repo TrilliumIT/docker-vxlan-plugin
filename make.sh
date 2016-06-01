@@ -25,3 +25,6 @@ else
 fi
 
 docker build -t trilliumit/docker-vxlan-plugin:v${MAIN_VER} -t trilliumit/docker-vxlan-plugin:${DKR_TAG} . || exit $?
+
+docker run -it --rm --entrypoint cat trilliumit/docker-vxlan-plugin:master /go/bin/docker-vxlan-plugin > docker-vxlan-plugin
+chmod +x docker-vxlan-plugin
