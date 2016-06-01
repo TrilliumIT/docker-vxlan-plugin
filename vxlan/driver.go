@@ -489,7 +489,6 @@ func (d *Driver) cleanup(netID string) {
 		log.Errorf("Error getting containers: %v", err)
 		return
 	}
-	log.Debugf("%v containers running.", len(containers))
 	for _, container := range containers {
 		if _, ok := container.NetworkSettings.Networks[netName]; ok  {
 			log.Debugf("Other containers are still connected to this network")
