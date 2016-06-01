@@ -471,13 +471,13 @@ func (d *Driver) DeleteEndpoint(r *network.DeleteEndpointRequest) error {
 
 	// FIXME: Check for macvlan interfaces with vxlan as parent in every
 	// docker namespace
-	docker = d.docker
-	containers, err := docker.ContainerList(context.Background(), &dockertypes.ContainerListOptions{})
+	docker := d.docker
+	containers, err := docker.ContainerList(context.Background(), dockertypes.ContainerListOptions{})
 	if err != nil {
 		return err
 	}
 	for i := range containers {
-		if containers[i].NetworkSettings.Networks[netID] != "" {
+		if _, ok := containers[i].NetworkSettings.Networks[netID]; ok  {
 			log.Debugf("Other containers are still connected to this network")
 			return nil
 		}
