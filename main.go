@@ -30,7 +30,7 @@ func main() {
 		Usage: "VTEP device.",
 	}
 	app := cli.NewApp()
-	app.Name = "don"
+	app.Name = "docker-vxlan-plugin"
 	app.Usage = "Docker vxLan Networking"
 	app.Version = version
 	app.Flags = []cli.Flag{
