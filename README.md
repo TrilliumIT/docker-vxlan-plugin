@@ -1,4 +1,4 @@
-docker-vxlan-plugin is a vxlan plugin for docker that enables plumbing docker containers into an existing vxlan network.
+docker-vxlan-plugin is a vxlan plugin for docker designed for on premise deployments where users have full control over their network. It is purposefully built so that users can manage routing as part of their larger infrastructure, and avoid NAT and multi-homed containers. This plugin alone handles communication between containers on a single vxlan, even (directly) between hosts. However, in `global` mode it requires an external routing system to route between vxlans. Please see our work on [docker-drouter](https://github.com/TrilliumIT/docker-drouter/) for a distributed routing system that enables short-cut routing between vxlans.
 
 ## Use Cases
 
