@@ -371,18 +371,6 @@ func (d *Driver) createVxLan(vxlanName string, net *dockertypes.NetworkResource)
 		return nil, err
 	}
 
-	if d.scope == "local" {
-		for _, config := range net.IPAM.Config {
-			mask := strings.Split(config.Subnet, "/")[1]
-			gatewayIP, err := netlink.ParseAddr(config.Gateway + "/" + mask)
-			if err != nil {
-				log.Errorf("Error parsing gateway address: %v", err)
-				return nil, err
-			}
-			netlink.AddrAdd(vxlan, gatewayIP)
-		}
-	}
-
 	return vxlan, nil
 }
 

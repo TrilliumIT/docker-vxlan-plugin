@@ -1,8 +1,8 @@
-docker-vxlan-plugin is a vxlan plugin for docker designed for on premise deployments where users have full control over their network. It is purposefully built so that users can manage routing as part of their larger infrastructure, and avoid NAT and multi-homed containers. This plugin alone handles communication between containers on a single vxlan, even (directly) between hosts. However, in `global` mode it requires an external routing system to route between vxlans. Please see our work on [docker-drouter](https://github.com/TrilliumIT/docker-drouter/) for a distributed routing system that enables short-cut routing between vxlans.
+docker-vxlan-plugin is a vxlan plugin for docker designed for on premise deployments where users have full control over their network. It is purposefully built so that users can manage routing as part of their larger infrastructure, and avoid NAT and multi-homed containers. This plugin alone handles communication between containers on a single vxlan, even (directly) between hosts. It requires an external routing system to route between vxlans. Please see our work on [docker-drouter](https://github.com/TrilliumIT/docker-drouter/) for a distributed routing system that enables short-cut routing between vxlans.
 
 ## Use Cases
 
-The out of box networking options for docker are built around a use case common to deployment on managed virtual servers where each host has a single public IP address. They are not well suited to bare metal datacenter deployments where routing can be controlled and multiple layers of nat is undesirable. This plugin does not nat your containers and assumes that you're running it in an environment where you know how to distribute routes to your vxlan network. If you run in global mode it is expected that you will set the gateway to the IP address of another router that already exists on your vxlan network.
+The out of box networking options for docker are built around a use case common to deployment on managed virtual servers where each host has a single public IP address. They are not well suited to bare metal datacenter deployments where routing can be controlled and multiple layers of nat is undesirable. This plugin does not nat your containers and assumes that you're running it in an environment where you know how to distribute routes to your vxlan network. You must set the gateway to the IP address of another router that already exists on your vxlan network.
 
 ## Quick start
 
@@ -36,7 +36,7 @@ debug output
 
 #### -scope
 
-scope of the plugin. Can be either `local` or `global`. Default is `local`. If `-scope=global` is specified the network options will be published to the docker cluster key-value store and containers can be brought up on the network on any host in the cluster after the network has been created. The global scope will also allow the default global IPAM driver to be used which will coordinate IP address allocation between all hosts in a docker cluster. Note that in global scope the gateway address specified during network creation will not be assigned to the host, but it will still be passed to containers as their default route.
+scope of the plugin. Can be either `local` or `global`. Default is `local`. If `-scope=global` is specified the network options will be published to the docker cluster key-value store and containers can be brought up on the network on any host in the cluster after the network has been created. The global scope will also allow the default global IPAM driver to be used which will coordinate IP address allocation between all hosts in a docker cluster. Note that the gateway address specified during network creation will not be assigned to the host, but it will still be passed to containers as their default route. This applies in both `global` and `local` mode.
 
 #### -vtepdev
 
