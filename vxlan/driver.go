@@ -4,7 +4,6 @@ import (
 	gonet "net"
 	"strconv"
 	"errors"
-	"strings"
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
