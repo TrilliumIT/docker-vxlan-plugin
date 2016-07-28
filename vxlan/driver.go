@@ -1,32 +1,32 @@
 package vxlan
 
 import (
-	gonet "net"
-	"strconv"
 	"errors"
 	"fmt"
+	gonet "net"
+	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/network"
 	"github.com/vishvananda/netlink"
 
-	"golang.org/x/net/context"
 	dockerclient "github.com/docker/engine-api/client"
 	dockertypes "github.com/docker/engine-api/types"
+	"golang.org/x/net/context"
 )
 
 type Driver struct {
 	network.Driver
-	scope	          string
-	vtepdev           string
-	networks          map[string]*NetworkState
-	docker	          *dockerclient.Client
+	scope    string
+	vtepdev  string
+	networks map[string]*NetworkState
+	docker   *dockerclient.Client
 }
 
 // NetworkState is filled in at network creation time
 // it contains state that we wish to keep for each network
 type NetworkState struct {
-	VXLan	 *netlink.Vxlan
+	VXLan    *netlink.Vxlan
 	Gateway  string
 	IPv4Data []*network.IPAMData
 	IPv6Data []*network.IPAMData
@@ -40,10 +40,10 @@ func NewDriver(scope string, vtepdev string) (*Driver, error) {
 		return nil, err
 	}
 	d := &Driver{
-		scope: scope,
-		vtepdev: vtepdev,
+		scope:    scope,
+		vtepdev:  vtepdev,
 		networks: make(map[string]*NetworkState),
-		docker: docker,
+		docker:   docker,
 	}
 	return d, nil
 }
@@ -58,7 +58,7 @@ func (d *Driver) GetCapabilities() (*network.CapabilitiesResponse, error) {
 }
 
 type intNames struct {
-	VxlanName  string
+	VxlanName string
 }
 
 func getIntNames(netID string, docker *dockerclient.Client) (*intNames, error) {
@@ -103,7 +103,7 @@ func getGateway(netID string, docker dockerclient.Client) (string, error) {
 }
 
 type intLinks struct {
-	Vxlan  *netlink.Vxlan
+	Vxlan *netlink.Vxlan
 }
 
 // this function gets netlink devices or creates them if they don't exist
@@ -183,14 +183,14 @@ func (d *Driver) createVxLan(vxlanName string, net *dockertypes.NetworkResource)
 		}
 		if k == "VxlanId" {
 			log.Debugf("VxlanID: %+v", v)
-			VxlanId, err := strconv.ParseInt(v, 0, 32)
+			VxlanID, err := strconv.ParseInt(v, 0, 32)
 			if err != nil {
 				log.Errorf("Error converting VxlanId to int: %v", err)
 				return nil, err
 			}
-			log.Debugf("VxlanID: %+v", VxlanId)
-			log.Debugf("int(VxlanID): %+v", int(VxlanId))
-			vxlan.VxlanId = int(VxlanId)
+			log.Debugf("VxlanID: %+v", VxlanID)
+			log.Debugf("int(VxlanID): %+v", int(VxlanID))
+			vxlan.VxlanId = int(VxlanID)
 		}
 		if k == "VtepDev" {
 			vtepDev, err := netlink.LinkByName(v)
@@ -392,7 +392,7 @@ func (d *Driver) deleteNics(netID string) error {
 		}
 		log.Debugf("Deleting interface %+v", names.VxlanName)
 	}
-	
+
 	return nil
 }
 
@@ -477,7 +477,7 @@ func (d *Driver) cleanup(netID string) {
 		return
 	}
 	for _, container := range containers {
-		if _, ok := container.NetworkSettings.Networks[netName]; ok  {
+		if _, ok := container.NetworkSettings.Networks[netName]; ok {
 			log.Debugf("Other containers are still connected to this network")
 			return
 		}
@@ -545,9 +545,21 @@ func (d *Driver) Leave(r *network.LeaveRequest) error {
 
 // The vxlan driver will not expose ports, just respond empty.
 func (d *Driver) ProgramExternalConnectivity(r *network.ProgramExternalConnectivityRequest) error {
+	log.Debugf("Program External Connectivity request: %+v", r)
 	return nil
 }
 
 func (d *Driver) RevokeExternalConnectivity(r *network.RevokeExternalConnectivityRequest) error {
+	log.Debugf("Revoke External Connectivity request: %+v", r)
+	return nil
+}
+
+func (d *Driver) DiscoverNew(r *network.DiscoveryNotification) error {
+	log.Debugf("Discover New request: %+v", r)
+	return nil
+}
+
+func (d *Driver) DiscoverDelete(r *network.DiscoveryNotification) error {
+	log.Debugf("Discover Delete request: %+v", r)
 	return nil
 }
