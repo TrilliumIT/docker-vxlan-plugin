@@ -1,68 +1,69 @@
 hash: 17ce35fe44b3690c8bf1c886d0184fa3245840f63fa167eabe6eda2a58cf9b8b
-updated: 2016-07-27T10:48:48.897532603-04:00
+updated: 2016-08-26T14:24:33.108143012-04:00
 imports:
 - name: github.com/codegangsta/cli
-  version: d9021faab69f92295ef7061bd39e4a76dcbdef32
+  version: 05fe449c81eb7305a34e9253c321c960a1c5e057
 - name: github.com/coreos/go-systemd
-  version: d6c05a1dcbb5ac02b7653da4d99e5db340c20778
+  version: 5c49e4850c879a0ddc061e8f4adcf307de8a8bc2
   subpackages:
   - activation
   - util
 - name: github.com/coreos/pkg
-  version: a48e304ff9331be6d5df352b6b47bd1395ab5dd7
+  version: 3ac0863d7acf3bc44daf49afef8919af12f704ef
   subpackages:
   - dlopen
 - name: github.com/docker/distribution
-  version: 4abae2ae560ba91db98779db2739eb97d7592fba
+  version: dea554fc7cce2f2e7af5b1e1d38e28c5e96e1d9e
   subpackages:
-  - reference
   - digest
+  - reference
 - name: github.com/docker/engine-api
-  version: dccf10e58ac9d544c9f7fadcc3f60a8413d0df98
+  version: b66d7d91dbde8b568eab9587fe9cbdd08506ed2e
   subpackages:
   - client
-  - types
   - client/transport
   - client/transport/cancellable
+  - types
+  - types/blkiodev
   - types/container
   - types/filters
+  - types/mount
   - types/network
   - types/reference
   - types/registry
+  - types/strslice
   - types/swarm
   - types/time
   - types/versions
-  - types/blkiodev
-  - types/strslice
 - name: github.com/docker/go-connections
-  version: 990a1a1a70b0da4c4cb70e117971a4f0babfbf1a
+  version: 0bad1a3951398f88ef4dd75fdb42af374430be89
   subpackages:
+  - nat
   - sockets
   - tlsconfig
-  - nat
 - name: github.com/docker/go-plugins-helpers
-  version: dd9c6831a796ea025dfae8448d6a34d081b99898
+  version: f3a3876798ee4f63bee3e7ee8911a2c27e7710b9
   subpackages:
   - network
   - sdk
 - name: github.com/docker/go-units
-  version: f2d77a61e3c169b43402a0a1e84f06daf29b8190
+  version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
 - name: github.com/Microsoft/go-winio
   version: ce2922f643c8fd76b46cadc7f404a06282678b34
 - name: github.com/opencontainers/runc
-  version: 522674998576b3aefdde233ffab20f763b83ac19
+  version: c520720728515d546d8debe937ff489abf718b79
   subpackages:
   - libcontainer/user
 - name: github.com/Sirupsen/logrus
-  version: a283a10442df8dc09befd873fab202bf8a253d6a
+  version: 08a8a7c27e3d058a8989316a850daad1c10bf4ab
 - name: github.com/vishvananda/netlink
-  version: e73bad418fd727ed3a02830b1af1ad0283a1de6c
+  version: 63381f39fceb1c5c13503a90e1c2603caeafe3c5
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
   version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/net
-  version: 4876518f9e71663000c348837735820161a42df7
+  version: 07b51741c1d6423d4a6abab1c49940ec09cb1aaf
   subpackages:
   - context
   - proxy
