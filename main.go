@@ -1,16 +1,16 @@
 package main
 
 import (
+	"github.com/TrilliumIT/docker-vxlan-plugin/vxlan"
 	"os"
-        "github.com/TrilliumIT/docker-vxlan-plugin/vxlan"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/go-plugins-helpers/network"
 	"github.com/codegangsta/cli"
+	"github.com/docker/go-plugins-helpers/network"
 )
 
 const (
-	version = "0.7"
+	version = "0.7.1"
 )
 
 func main() {
@@ -48,10 +48,10 @@ func Run(ctx *cli.Context) {
 		log.SetLevel(log.DebugLevel)
 	}
 	log.SetFormatter(&log.TextFormatter{
-		ForceColors: false,
-		DisableColors: true,
+		ForceColors:      false,
+		DisableColors:    true,
 		DisableTimestamp: false,
-		FullTimestamp: true,
+		FullTimestamp:    true,
 	})
 	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"))
 	if err != nil {
