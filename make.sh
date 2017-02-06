@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-
 check_prerequisites() {
   declare -a errors
 
@@ -12,7 +11,6 @@ check_prerequisites() {
 
   [[ -x "$GOPATH/bin/glide" ]] || \
     errors=("${errors[@]}" "glide not found in \"$GOPATH/bin/\" - see https://github.com/TrilliumIT/docker-vxlan-plugin/issues/2 for explanations on this need.")
-
 
   # Print status
   if [[ "${#errors[@]}" > 0 ]]; then
@@ -28,7 +26,8 @@ check_prerequisites() {
 
 check_versions() {
   VERS="${LATEST_RELEASE}\n${MAIN_VER}"
-  
+  DKR_TAG="master"
+
   # For tagged commits
   if [ "$(git describe --tags)" = "$(git describe --tags --abbrev=0)" ] ; then
   	if [ $(printf ${VERS} | uniq | wc -l) -gt 1 ] ; then
@@ -45,13 +44,8 @@ check_versions() {
   		echo "Please increment the version in main.go"
   		return 1
   	fi
-  	DKR_TAG="master"
   fi
 }
-
-
-
-
 
 LATEST_RELEASE=$(git describe --tags --abbrev=0 | sed "s/^v//g")
 MAIN_VER=$(grep "version = " main.go | sed 's/[ \t]*version[ \t]*=[ \t]*//g' | sed 's/"//g')
@@ -66,9 +60,8 @@ docker build -t trilliumit/docker-vxlan-plugin-build:v${MAIN_VER} -t trilliumit/
 
 # Retrieve binary
 mkdir -p build
-docker run -it --rm --entrypoint /go/src/github.com/TrilliumIT/docker-vxlan-plugin/prepare_scratch.sh -v $PWD/build:/export trilliumit/docker-vxlan-plugin-build:${DKR_TAG}
+docker run -it --rm trilliumit/docker-vxlan-plugin-build:${DKR_TAG} cat /go/bin/docker-vxlan-plugin > build/docker-vxlan-plugin
 chmod +x build/docker-vxlan-plugin
 
 # Build final container
 docker build -t trilliumit/docker-vxlan-plugin:v${MAIN_VER} -t trilliumit/docker-vxlan-plugin:${DKR_TAG} -f Dockerfile.run . || exit $?
-
