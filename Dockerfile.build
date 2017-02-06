@@ -15,6 +15,5 @@ WORKDIR ${SRC_ROOT}
 
 # Used to only go get if sources change.
 ADD . ${SRC_ROOT}/
-RUN go get -t $($GOPATH/bin/glide novendor)
 
-ENTRYPOINT ["/go/bin/docker-vxlan-plugin"]
+RUN CGO_ENABLED=0 GOOS=linux go get -a -t -installsuffix cgo $($GOPATH/bin/glide novendor)
