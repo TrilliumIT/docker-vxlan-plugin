@@ -1,6 +1,6 @@
-FROM golang:1.5.4-wheezy
+FROM golang:1.9-stretch
 
-MAINTAINER Clint Armstrong <clint@clintarmstrong.net>
+MAINTAINER Clint Armstrong <carmstrong@trilliumit.com>
 
 ENV GO15VENDOREXPERIMENT 1
 

@@ -1,5 +1,5 @@
 hash: 17ce35fe44b3690c8bf1c886d0184fa3245840f63fa167eabe6eda2a58cf9b8b
-updated: 2016-08-26T14:24:33.108143012-04:00
+updated: 2018-02-07T16:55:28.925031616-05:00
 imports:
 - name: github.com/codegangsta/cli
   version: 05fe449c81eb7305a34e9253c321c960a1c5e057
@@ -63,7 +63,7 @@ imports:
 - name: github.com/vishvananda/netns
   version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/net
-  version: 07b51741c1d6423d4a6abab1c49940ec09cb1aaf
+  version: 4876518f9e71663000c348837735820161a42df7
   subpackages:
   - context
   - proxy
