@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	version = "0.7.1"
+	version = "0.8"
 )
 
 func main() {
@@ -29,6 +29,10 @@ func main() {
 		Value: "",
 		Usage: "VTEP device.",
 	}
+	var flagLocalGateway = cli.BoolFlag{
+		Name:  "local-gateway",
+		Usage: "Adds gateway address to a local macvlan@vxlan interface.",
+	}
 	app := cli.NewApp()
 	app.Name = "docker-vxlan-plugin"
 	app.Usage = "Docker vxLan Networking"
@@ -37,6 +41,7 @@ func main() {
 		flagDebug,
 		flagScope,
 		flagVtepDev,
+		flagLocalGateway,
 	}
 	app.Action = Run
 	app.Run(os.Args)
@@ -53,7 +58,7 @@ func Run(ctx *cli.Context) {
 		DisableTimestamp: false,
 		FullTimestamp:    true,
 	})
-	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"))
+	d, err := vxlan.NewDriver(ctx.String("scope"), ctx.String("vtepdev"), ctx.Bool("local-gateway"))
 	if err != nil {
 		panic(err)
 	}
