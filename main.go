@@ -63,5 +63,5 @@ func Run(ctx *cli.Context) {
 		panic(err)
 	}
 	h := network.NewHandler(d)
-	h.ServeUnix("root", "vxlan")
+	h.ServeUnix("vxlan", 0)
 }
