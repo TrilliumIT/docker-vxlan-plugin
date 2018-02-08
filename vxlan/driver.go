@@ -12,8 +12,8 @@ import (
 	"github.com/docker/go-plugins-helpers/network"
 	"github.com/vishvananda/netlink"
 
-	dockerclient "github.com/docker/engine-api/client"
-	dockertypes "github.com/docker/engine-api/types"
+	dockertypes "github.com/docker/docker/api/types"
+	dockerclient "github.com/docker/docker/client"
 	"golang.org/x/net/context"
 )
 
@@ -55,7 +55,7 @@ type intNames struct {
 }
 
 func getIntNames(netID string, docker *dockerclient.Client) (*intNames, error) {
-	net, err := docker.NetworkInspect(context.Background(), netID)
+	net, err := docker.NetworkInspect(context.Background(), netID, dockertypes.NetworkInspectOptions{})
 	if err != nil {
 		log.Errorf("Error getting networks: %v", err)
 		return nil, err
@@ -81,7 +81,7 @@ func getIntNames(netID string, docker *dockerclient.Client) (*intNames, error) {
 }
 
 func getGateway(netID string, docker *dockerclient.Client) (string, string, error) {
-	net, err := docker.NetworkInspect(context.Background(), netID)
+	net, err := docker.NetworkInspect(context.Background(), netID, dockertypes.NetworkInspectOptions{})
 	if err != nil {
 		log.Errorf("Error inspecting network: %v", err)
 		return "", "", err
@@ -105,7 +105,7 @@ type intLinks struct {
 // this function gets netlink devices or creates them if they don't exist
 func (d *Driver) getLinks(netID string) (*intLinks, error) {
 	docker := d.docker
-	net, err := docker.NetworkInspect(context.Background(), netID)
+	net, err := docker.NetworkInspect(context.Background(), netID, dockertypes.NetworkInspectOptions{})
 	if err != nil {
 		log.Errorf("Error inspecting network: %v", err)
 		return nil, err
@@ -499,7 +499,7 @@ func (d *Driver) cleanup(netID string) {
 	}
 
 	// Do nothing if there are other containers in this network
-	netResource, err := d.docker.NetworkInspect(context.Background(), netID)
+	netResource, err := d.docker.NetworkInspect(context.Background(), netID, dockertypes.NetworkInspectOptions{})
 	if err != nil {
 		log.Errorf("Error inspecting network: %v", err)
 		return

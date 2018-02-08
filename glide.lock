@@ -1,5 +1,5 @@
-hash: 17ce35fe44b3690c8bf1c886d0184fa3245840f63fa167eabe6eda2a58cf9b8b
-updated: 2018-02-07T16:55:28.925031616-05:00
+hash: db5096f183a66a8e0337aff153a3f9bb3374a01a66e2088f6cec703522989126
+updated: 2018-02-08T08:01:49.869473097-05:00
 imports:
 - name: github.com/codegangsta/cli
   version: 05fe449c81eb7305a34e9253c321c960a1c5e057
@@ -17,24 +17,26 @@ imports:
   subpackages:
   - digest
   - reference
-- name: github.com/docker/engine-api
-  version: b66d7d91dbde8b568eab9587fe9cbdd08506ed2e
+- name: github.com/docker/docker
+  version: 3a633a712c8bbb863fe7e57ec132dd87a9c4eff7
   subpackages:
+  - api
+  - api/types
+  - api/types/blkiodev
+  - api/types/container
+  - api/types/events
+  - api/types/filters
+  - api/types/image
+  - api/types/mount
+  - api/types/network
+  - api/types/registry
+  - api/types/strslice
+  - api/types/swarm
+  - api/types/swarm/runtime
+  - api/types/time
+  - api/types/versions
+  - api/types/volume
   - client
-  - client/transport
-  - client/transport/cancellable
-  - types
-  - types/blkiodev
-  - types/container
-  - types/filters
-  - types/mount
-  - types/network
-  - types/reference
-  - types/registry
-  - types/strslice
-  - types/swarm
-  - types/time
-  - types/versions
 - name: github.com/docker/go-connections
   version: 0bad1a3951398f88ef4dd75fdb42af374430be89
   subpackages:
@@ -48,12 +50,25 @@ imports:
   - sdk
 - name: github.com/docker/go-units
   version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
+- name: github.com/gogo/protobuf
+  version: 1adfc126b41513cc696b209667c8656ea7aac67c
+  subpackages:
+  - proto
 - name: github.com/Microsoft/go-winio
   version: ce2922f643c8fd76b46cadc7f404a06282678b34
+- name: github.com/opencontainers/go-digest
+  version: 279bed98673dd5bef374d3b6e4b09e2af76183bf
+- name: github.com/opencontainers/image-spec
+  version: 577479e4dc273d3779f00c223c7e0dba4cd6b8b0
+  subpackages:
+  - specs-go
+  - specs-go/v1
 - name: github.com/opencontainers/runc
   version: c520720728515d546d8debe937ff489abf718b79
   subpackages:
   - libcontainer/user
+- name: github.com/pkg/errors
+  version: 30136e27e2ac8d167177e8a583aa4c3fea5be833
 - name: github.com/Sirupsen/logrus
   version: 08a8a7c27e3d058a8989316a850daad1c10bf4ab
 - name: github.com/vishvananda/netlink
@@ -66,6 +81,7 @@ imports:
   version: 4876518f9e71663000c348837735820161a42df7
   subpackages:
   - context
+  - context/ctxhttp
   - proxy
 - name: golang.org/x/sys
   version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
